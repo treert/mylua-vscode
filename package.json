@@ -10,10 +10,19 @@
     "Other"
   ],
   "activationEvents": [
+    "onLanguage:mylua",
     "onCommand:mylua.helloWorld"
   ],
   "main": "./out/extension.js",
   "contributes": {
+    "languages": [
+        {
+            "id": "mylua",
+            "extensions": [
+                ".mylua"
+            ]
+        }
+    ],
     "commands": [
       {
         "command": "mylua.helloWorld",
@@ -28,6 +37,9 @@
     "pretest": "npm run compile && npm run lint",
     "lint": "eslint src --ext ts",
     "test": "node ./out/test/runTest.js"
+  },
+  "dependencies": {
+    "vscode-languageclient": "^8.0.1"
   },
   "devDependencies": {
     "@types/vscode": "^1.74.0",
