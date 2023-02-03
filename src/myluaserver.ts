@@ -1,6 +1,7 @@
 import * as path from 'path';
 import * as os from 'os';
 import * as fs from 'fs';
+import * as net from 'net';
 import * as vscode from 'vscode';
 import {
     workspace as Workspace,
@@ -16,6 +17,7 @@ import {
     LanguageClientOptions,
     ServerOptions,
     DocumentSelector,
+    StreamInfo,
 } from 'vscode-languageclient/node';
 
 // 控制配置。todo 具体怎么用还要看
@@ -76,6 +78,19 @@ class MyLuaClient {
         let serverOptions: ServerOptions = {
             command: command,
             args: commandParam,
+        };
+
+        // learn from https://github.com/microsoft/vscode-languageserver-node/issues/662
+        serverOptions = ()=>{
+            // Connect to language server via socket
+            let socket = net.connect({
+                port:40080
+            });
+            let result: StreamInfo = {
+                writer: socket,
+                reader: socket
+            };
+            return Promise.resolve(result);
         };
 
         this.client = new LanguageClient(
