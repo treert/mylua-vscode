@@ -5,6 +5,7 @@ import yaml
 import json
 import re
 from copy import deepcopy
+import jmespath
 
 
 WorkDir = os.path.abspath(os.path.dirname(__file__))
@@ -58,5 +59,22 @@ def get_and_dump_meta_as_yaml():
     with open(path,"w",encoding="utf-8") as file:
         file.write(yamlstr)
 
+def get_model_jsonstr()->str:
+    # url = 'https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/metaModel/metaModel.json'
+    url = f"file:///{WorkDir}/metaModel.json"
+    res = urlopen(url)
+    jsonstr = res.read()
+    return jsonstr
+
+
+
+def print_debug_info():
+    jsonstr = get_model_jsonstr()
+    data:dict = json.loads(jsonstr)
+    ret = jmespath.search("requests[].result.items | [*]",data)
+    print(ret)
+
 if __name__ == "__main__":
-    get_and_dump_meta_as_yaml()
+    print("start")
+    print_debug_info()
+    # get_and_dump_meta_as_yaml()

@@ -51,10 +51,10 @@ internal class InitializeParams
     /// <summary>
     /// User provided initialization options.
     /// </summary>\
-    object initializationOptions { get; init; }
+    //object initializationOptions { get; init; }
 
     ///// <summary>
     ///// The capabilities provided by the client (editor or tool)
     ///// </summary>
-    ClientCapabilities capabilities { get; init; }
+    //ClientCapabilities capabilities { get; init; }
 }

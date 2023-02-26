@@ -9,7 +9,7 @@ Console.WriteLine($"pwd={Environment.CurrentDirectory}");
 
 //MySession.RunServer(40080);
 
-if(true){
+if (true){
     var jsonstr = File.ReadAllText("tmp/initialize.jsonc");
     var msg = JsonNode.Parse(jsonstr);
     var init_json = msg!["params"];
