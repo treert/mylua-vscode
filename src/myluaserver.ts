@@ -17,6 +17,8 @@ import {
     LanguageClientOptions,
     ServerOptions,
     DocumentSelector,
+    ClientCapabilities,
+    TextDocumentClientCapabilities,
     StreamInfo,
 } from 'vscode-languageclient/node';
 

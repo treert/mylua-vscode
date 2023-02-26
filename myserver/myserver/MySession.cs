@@ -6,6 +6,7 @@ using System.Net;
 using System.Text;
 using System.Threading.Tasks;
 using System.Text.RegularExpressions;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace myserver
 {
@@ -14,7 +15,21 @@ namespace myserver
         public static void RunSession(Stream inputStream, Stream outputStream)
         {
             var session = new MySession();
-            session.Start(inputStream, outputStream).Wait();
+            try
+            {
+                session.Start(inputStream, outputStream).Wait();
+            }
+            catch { }
+            finally
+            {
+
+                if (logFile != null)
+                {
+                    logFile.Flush();
+                    logFile.Close();
+                    logFile = null;
+                }
+            }
         }
         public static void RunServer(int port)
         {
@@ -49,10 +64,19 @@ namespace myserver
             }).Start();
         }
 
-        public static void Log(string format, params object[] data)
+        static string LOG_FILE_PATH = "mylua.debug.log";
+        static TextWriter logFile;
+        public static void Log(string msg)
         {
-            //Console.Error.WriteLine(format, data);
-            Console.Error.WriteLine(format);
+            Console.Error.WriteLine(msg);
+            if(LOG_FILE_PATH != null)
+            {
+                if (logFile == null)
+                {
+                    logFile = File.CreateText(LOG_FILE_PATH);
+                }
+                logFile.WriteLine(string.Format("{0} {1}", DateTime.UtcNow.ToLongTimeString(), msg));
+            }
         }
 
         protected const int BUFFER_SIZE = 4096;

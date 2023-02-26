@@ -1,6 +1,12 @@
 ## 概述
 零散的整理下 lsp 相关的资料
 
+## 资料
+- LSP
+  - https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/
+- Meta Model
+  - https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/metaModel/metaModel.json
+
 ## 协议数据的基本结构。
 ```json
 Content-Length: ...\r\n
@@ -275,7 +281,3 @@ server端请求
 - Create Work Done Progress (:arrow_right_hook:)
 - Cancel a Work Done Progress (:arrow_right:)
 - Telemetry Notification (:arrow_left:)
-
-## Miscellaneous
-- Meta Model
-  - https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/metaModel/metaModel.json
