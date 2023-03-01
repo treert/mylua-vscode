@@ -6,19 +6,83 @@ Path example:
 - a[x=1 & y=2 , z=3 ].(p1,p2)
 - a.*.c | 1
 
-Syntax 0.1 very simple:
+Syntax 0.1 very simple: 不支持转义，限制很多，不过够用
+
 rootpath := path { '|' path}
 path := seg {'.' seg}
-cond := Name=Name {'&' Name=Name }
-attr := ( Name | Number | '' | '*' ) [ '[' cond {',' cond}  ']' ]
 seg := attr | '(' attr {',' attr} ')'
+attr := ( Name | Int | '' | '*' ) [ '[' cond {',' cond}  ']' ]
+cond := keys=Value {'&' keys=Value }
+keys := Name {'.' Name}
+
 '''
+import json
+from typing import Any
+
+class Lexer:
+    NotStart = object()
+    EOF = object() # 标记结束
+    def __init__(self, path:str) -> None:
+        self.path = path
+        self.leftpath = path # py slice string
+        self.cur_tk = Lexer.NotStart 
+        pass
+
+    def Raise(self, msg):
+        tk = self.cur_tk == Lexer.EOF and "<EOF>" or self.cur_tk
+        raise Exception(f"path format error at {len(self.path) - len(self.leftpath)} tk={tk} {msg or ''}")
+
+    def GetCurTK(self):
+        return self.cur_tk
+    def GetNextToken(self, expect_json_value:bool):
+        '''
+        读取新的token
+        '''
+        cur = self.leftpath.lstrip()
+        self.cur_tk = Lexer.EOF
+        if len(cur) > 0:
+            tk = cur[0]
+            sp_tks = '.*[]()|&,'
+            if sp_tks.find(tk) >= 0:
+                self.cur_tk = tk
+                cur = cur[1:]
+            else:
+                idx = 1
+                while idx < len(cur) and sp_tks.find(cur[idx]) >= 0:
+                    idx += 1
+                tk = cur[:idx].strip()
+                if expect_json_value:
+                    try:
+                        tk = json.loads(tk)
+                    except:
+                        pass # 保留原始字符串
+                else:
+                    try:
+                        tk = int(tk)
+                    except:
+                        pass # 保留原始字符串，这儿实际应该校验一下的，不过不管了
+                self.cur_tk = tk
+                cur = cur[idx:]
+
+        self.leftpath = cur
+        return self.cur_tk
+
+
+class Cond:
+    def Parse(self, lex:Lexer):
+        self.kvs:list[(list,Any)] = []
+        while tk:= lex.GetNextToken() != Lexer.EOF:
+            if tk in [',',']']:
+                break
+            k = [tk]
+            while tk:= lex.GetNextToken() == '.':
+                k.append(lex.GetNextToken())
+            if tk not in [',',']']:
+                lex.Raise("expect , or ] to end cond")
+
 
 class Attr:
-    def Parse(self,seg:str) -> str:
-        '''
-        解析attr, 返回剩余的字符串, 理论上应该是空串或者 , 开头的串
-        '''
+    def Parse(self,lex:Lexer):
         self.conds:list[list[tuple(str,str)]] = []
         cond_s_idx = seg.find('[')
         if cond_s_idx >= 0:
@@ -43,6 +107,15 @@ class Attr:
         return seg[all_e_idx+1:]
 
 class Segment:
+    def Parse(self, path:str) -> str:
+        '''
+        解析 seg
+        '''
+        if path.startswith('('):
+            attr = Attr()
+            path = attr.Parse()
+        pass
+
     def __init__(self, seg:str) -> None:
         if seg.startswith('('):
             assert(seg.endswith(')'))
@@ -56,6 +129,9 @@ class Segment:
         pass
 
 class Path:
+    def Parse(self, path:str) -> str:
+
+        pass
     def __init__(self, path:str) -> None:
         segs = path.split('.')
         self.segs:list[Segment] = []
