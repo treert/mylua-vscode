@@ -11,12 +11,13 @@ Syntax 0.1 very simple: 不支持转义，限制很多，不过够用
 rootpath := path { '|' path}
 path := seg {'.' seg} 
 seg := attr | '(' path {',' path} ')'
-attr := ( Name | Int | '' | '*' ) [ '[' cond {',' cond}  ']' ]
+attr := ( Name | Int | '' | '*' | '**' ) [ '[' cond {',' cond}  ']' ]
 cond := keys=Value {'&' keys=Value }
 keys := Name {'.' Name}
 
 '''
 import json
+import types
 from typing import Any
 
 class Lexer:
@@ -80,6 +81,21 @@ class Lexer:
         self.leftpath = cur
         return self.last_tk
 
+def _try_get_item_by_key(key,data):
+    try:
+        ret = data.__getitem__(key)
+        return (ret,True)
+    except:
+        return (None,False)
+
+def _get_item_by_keys(keys:list, data):
+    try:
+        for key in keys:
+            data = data.__getitem__(key)
+    except:
+        return None
+    return data
+
 class Cond:
     def Parse(self, lex:Lexer):
         self.kvs:list[(list,Any)] = []
@@ -90,7 +106,7 @@ class Cond:
             v = None
             while (tk:= lex.NextToken()) == '.':
                 k.append(lex.NextToken())
-            if tk != '=': 
+            if tk != '=':
                 lex.Raise("expect = for cond")
             v = lex.NextToken(True)
             self.kvs.append((k,v))
@@ -102,6 +118,12 @@ class Cond:
             if lex.LookHead() not in [',',']']:
                 lex.Raise("expect , or ] to end cond")
             
+    def Check(self, data:Any):
+        for (keys,value) in self.kvs:
+            if _get_item_by_keys(keys, data) != value:
+                return False
+        return True
+        
 class Attr:
     def Parse(self,lex:Lexer):
         tk = lex.LookHead()
@@ -111,6 +133,11 @@ class Attr:
             return
         if tk != '[':
             self.name_or_idx = lex.NextToken()
+            if self.name_or_idx == '*':
+                if lex.LookHead() == '*':
+                    lex.NextToken()
+                    self.name_or_idx = '**'
+
         tk = lex.LookHead()
         if tk == '[':
             # condition
@@ -127,6 +154,53 @@ class Attr:
             if lex.LookHead() != ']':
                 lex.Raise("expect ] to end cond")
             lex.NextToken()
+
+    def Search(self,data:Any)->list:
+        result = []
+        if self.name_or_idx == "":
+            self._Filter(data, result)
+        elif self.name_or_idx == '*':
+            Attr._For(data, lambda v: self._Filter(v, result))
+        elif self.name_or_idx == '**':
+            Attr._ForAll(data, lambda v: self._Filter(v, result))
+        else:
+            v,ok = _try_get_item_by_key(self.name_or_idx, data)
+            if ok:
+                self._Filter(v,result)
+        return result
+        
+    def _For(data:Any,call):
+        if type(data) == type([]):
+            for v in data:
+                call(v)
+        elif type(data) == type({}):
+            for v in data.values():
+                call(v)
+        pass
+    def _ForAll(data:Any,call, level:int = 0):
+        level +=1
+        if level > 99999:
+            raise Exception("data maybe has circle")
+        call(data)
+        if type(data) == type([]):
+            for v in data:
+                Attr._ForAll(v,call,level)
+        elif type(data) == type({}):
+            for v in data.values():
+                Attr._ForAll(v,call,level)
+        pass
+
+    def _Filter(self,data:Any, result:list):
+        if len(self.conds) == 0:
+            result.append(data)
+            return
+        ok = False
+        for cond in self.conds:
+            if cond.Check(data):
+                ok = True
+                break
+        if ok:
+            result.append(data)
 
 class Segment:
     def Parse(self, lex:Lexer):
@@ -152,6 +226,17 @@ class Segment:
             self.attr = attr
         pass
 
+    def Search(self,data):
+        if self.attr:
+            ret = self.attr.Search(data)
+            return ret
+        else:
+            ret = []
+            for path in self.paths:
+                t = path.Search(data)
+                ret += t
+            return ret
+
 class Path:
     def Parse(self, lex:Lexer):
         self.segs:list[Segment] = []
@@ -168,6 +253,17 @@ class Path:
             lex.Raise('expect | , ) to after path')
         pass
 
+    def Search(self,data):
+        ret = [data]
+        for seg in self.segs:
+            t = []
+            for d in ret:
+                tt = seg.Search(d)
+                t += tt
+            ret = t
+        return ret
+
+
 class RootPath:
     def Parse(self, lex:Lexer):
         self.paths:list[Path] = []
@@ -183,17 +279,68 @@ class RootPath:
         if lex.LookHead() != Lexer.EOF:
             lex.Raise("expect | to split path")
 
+    def Search(self, data:Any)->list:
+        ret = [data]
+        for p in self.paths:
+            t = []
+            for d in ret:
+                tt = p.Search(d)
+                t += tt
+            ret = t
+        return ret
 
-def search(path:str,data):
-    print("")
-
-def _test_parse(path:str):
+def parse(path:str):
     lex = Lexer(path)
     root = RootPath()
     root.Parse(lex)
-    print("ok")
+    return root
+
+class XPathDataWrap:
+    def __init__(self, *data) -> None:
+        self.datas:list = [*data]
+        pass
+
+    # def __init__(self):
+    #     pass
+
+    def search(self, path:str):
+        root = parse(path)
+        ret = []
+        for d in self.datas:
+            ret += root.Search(d)
+        wrap = XPathDataWrap()
+        wrap.datas = ret
+        return wrap
+
+def search(path:str,*data)->list:
+    wrap = XPathDataWrap(*data)
+    ret = wrap.search(path)
+    return ret.datas
+
+
 
 if __name__ == "__main__":
+    import colorama as cc
+    from colorama import Style
+    def _test_parse(path:str):
+        root = parse(path)
+        print(f"{cc.Fore.GREEN}parse {path} ok{Style.RESET_ALL}")
+
+    def _test_search(data, *paths):
+        print(f'{cc.Fore.BLUE}search in {data}{cc.Style.RESET_ALL}')
+        for path in paths:
+            print("{: >16} => {}".format(path, search(path,data)))
+        
     print('test xpath')
     _test_parse("x.(y[m=hahaha&n=null],z).xx")
     _test_parse("a.(b.c,0.1.2).d | x.(y[m=hahaha&n=null],z).xx")
+    print('test xpath.search')
+    _test_search([1,2],"")
+    _test_search({'x':{'y':{'z':'zzz'}}},"x.y.z")
+    _test_search({'a':{'z':1}, 'b':{'z':2}},"[z=1]")
+    _test_search({'x':{'m':{'z':1},'n':{'z':2}}}
+                 ,"x.(m,n)"
+                 ,"x.(m,n).[z=1]"
+                 ,"x.(m,n)|[z=1]"
+                 ,"x.*.[z=1]"
+                 ,"**.[z=1]")
