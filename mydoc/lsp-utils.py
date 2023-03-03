@@ -5,7 +5,7 @@ import yaml
 import json
 import re
 from copy import deepcopy
-import jmespath
+import colorama as cc
 
 
 WorkDir = os.path.abspath(os.path.dirname(__file__))
@@ -66,13 +66,33 @@ def get_model_jsonstr()->str:
     jsonstr = res.read()
     return jsonstr
 
-
+def remove_duplicates(item_list):
+    ''' Removes duplicate items from a list '''
+    singles_list = []
+    for element in item_list:
+        if element not in singles_list:
+            singles_list.append(element)
+    return singles_list
 
 def print_debug_info():
     jsonstr = get_model_jsonstr()
     data:dict = json.loads(jsonstr)
-    ret = jmespath.search("requests[].result.items | [*]",data)
-    print(ret)
+    import xpath
+    
+    def pp(path):
+        ret = xpath.search(path, data)
+        ret = remove_duplicates(ret)
+        print(f"{cc.Fore.BLUE}{path: >20} ={len(ret)}>{cc.Style.RESET_ALL}")
+        print(ret[:10])
+        return ret
+
+    pp('metaData')
+    pp('**.kind')
+    xx = pp('**.[kind=base,kind=literal,kind=stringLiteral].[name]')
+    xx = pp('**.[kind=literal,kind=stringLiteral]')
+    pp("**[kind=orsas,kind=tuple]]")
+
+    print(xx[0])
 
 if __name__ == "__main__":
     print("start")

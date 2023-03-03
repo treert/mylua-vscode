@@ -12,15 +12,20 @@ rootpath := path { '|' path}
 path := seg {'.' seg} 
 seg := attr | '(' path {',' path} ')'
 attr := ( Name | Int | '' | '*' | '**' ) [ '[' cond {',' cond}  ']' ]
-cond := keys=Value {'&' keys=Value }
+cond := condop {'&' condop }
+condop := [keys] [['!'] ( '='Value | '~' String） ]
 keys := Name {'.' Name}
+
+sp_str :=[[xxx]]
 
 '''
 import json
 import types
+import re
 from typing import Any
 
 class Lexer:
+    SpKeyTks = '!~.*[]()|&,='
     Dummy = object()
     EOF = object() # 标记结束
     def __init__(self, path:str) -> None:
@@ -62,10 +67,22 @@ class Lexer:
         self.last_tk = Lexer.EOF
         if len(cur) > 0:
             tk = cur[0]
-            sp_tks = '.*[]()|&,='
+            sp_tks = Lexer.SpKeyTks
             if sp_tks.find(tk) >= 0:
-                self.last_tk = tk
-                cur = cur[1:]
+                if cur[:2] == '[[':
+                    idx = 2
+                    while idx < len(cur):
+                        tmp = cur[idx:idx+2]
+                        if tmp == ']]':
+                            break
+                        idx += 1
+                    if idx >= len(cur):
+                        raise Exception(f"path format error, expect ]] to end sp-string")
+                    self.last_tk = cur[2:idx]
+                    cur = cur[idx+2:]
+                else:
+                    self.last_tk = tk
+                    cur = cur[1:]
             else:
                 idx = 1
                 while idx < len(cur) and sp_tks.find(cur[idx]) < 0:
@@ -98,18 +115,32 @@ def _get_item_by_keys(keys:list, data):
 
 class Cond:
     def Parse(self, lex:Lexer):
-        self.kvs:list[(list,Any)] = []
+        self.kvs:list[tuple[list,Any,bool,Any]] = []
         while lex.LookHead() != Lexer.EOF:
             if lex.LookHead() in [',',']']:
                 return
-            k = [lex.NextToken()]
-            v = None
-            while (tk:= lex.NextToken()) == '.':
-                k.append(lex.NextToken())
-            if tk != '=':
-                lex.Raise("expect = for cond")
-            v = lex.NextToken(True)
-            self.kvs.append((k,v))
+            if lex.LookHead() not in ['=','~','!']:
+                k = [lex.NextToken()]
+                while (tk:= lex.LookHead()) == '.':
+                    lex.NextToken()
+                    k.append(lex.NextToken())
+            else:
+                k = []
+            has_not = lex.LookHead() == '!'
+            if has_not:
+                lex.NextToken()
+            tk = lex.LookHead()
+            if tk == '=':
+                lex.NextToken()
+                v = lex.NextToken(True)
+                self.kvs.append((k,v,has_not,'='))
+            elif tk == '~':
+                lex.NextToken()
+                v = str(lex.NextToken())
+                v = re.compile(v)
+                self.kvs.append((k,v,has_not,'~'))
+            else:
+                self.kvs.append((k,None,has_not,'exsit'))
 
             if lex.LookHead() == '&':
                 lex.NextToken()
@@ -119,8 +150,19 @@ class Cond:
                 lex.Raise("expect , or ] to end cond")
             
     def Check(self, data:Any):
-        for (keys,value) in self.kvs:
-            if _get_item_by_keys(keys, data) != value:
+        for (keys,value,has_not,op) in self.kvs:
+            v = _get_item_by_keys(keys, data)
+            ok = True
+            if op == 'exsit':
+                ok = v != None
+            elif op == '=':
+                ok = v == value
+            elif op == '~':
+                p:re.Pattern = value
+                ok = type(v) == type('') and p.fullmatch(v)
+            if has_not:
+                ok = not ok
+            if not ok:
                 return False
         return True
         
@@ -336,6 +378,7 @@ if __name__ == "__main__":
     _test_parse("a.(b.c,0.1.2).d | x.(y[m=hahaha&n=null],z).xx")
     print('test xpath.search')
     _test_search([1,2],"")
+    _test_search("abc.12","[~[[[abc]*\.\d*]]]", "[!=abc12]")
     _test_search({'x':{'y':{'z':'zzz'}}},"x.y.z")
     _test_search({'a':{'z':1}, 'b':{'z':2}},"[z=1]")
     _test_search({'x':{'m':{'z':1},'n':{'z':2}}}
