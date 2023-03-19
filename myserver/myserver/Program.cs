@@ -14,7 +14,8 @@ if (true){
     var msg = JsonNode.Parse(jsonstr);
     var init_json = msg!["params"];
     var init_str = init_json!.ToJsonString();
-    var init_params = JsonSerializer.Deserialize<Protocol.InitializeParams>(init_str);
+    var init_params = init_json.Deserialize< Protocol.InitializeParams >();
+    //var init_params = JsonSerializer.Deserialize<Protocol.InitializeParams>(init_str);
     var serializeOptions = new JsonSerializerOptions
     {
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,

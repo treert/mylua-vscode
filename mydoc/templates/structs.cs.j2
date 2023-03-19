@@ -1,0 +1,17 @@
+using Protocol;
+
+{% for it in items %}
+{% if it.documentation %}
+/**
+{%set lines = it.documentation.split('\n')%}
+{%for line in lines %}
+ * {{line}}
+{%endfor%}
+ */
+{% endif %}
+public class {{it.name}} {
+    {% for prop in it.properties %}
+    public {{prop.typename}}{{ it.canbenull and '?' }} {{ prop.name }} { get; set; }
+    {% endfor %}
+}
+{% endfor %}

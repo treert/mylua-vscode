@@ -88,11 +88,21 @@ def print_debug_info():
 
     pp('metaData')
     pp('**.kind')
-    xx = pp('**.[kind=base,kind=literal,kind=stringLiteral].[name]')
-    xx = pp('**.[kind=literal,kind=stringLiteral]')
-    pp("**[kind=orsas,kind=tuple]]")
+    # xx = pp('**.[kind=base,kind=literal,kind=stringLiteral].[name]')
+    # xx = pp('**.[kind=literal,kind=stringLiteral]')
+    pp("**[kind=tuple]")
+    pp("**[kind=or]")
 
-    print(xx[0])
+    # print(xx[0])
+    pp('**.[kind=or].items.*.kind')
+    # extends = pp('**.extends')
+    # for it in extends:
+    #     if len(it) > 1:
+    #         print(it)
+
+    pp('structures.*.[name=TextDocumentPositionParams,name=WorkDoneProgressParams]')
+    pp('structures.*.[name=TextDocumentRegistrationOptions]')
+
 
 if __name__ == "__main__":
     print("start")
