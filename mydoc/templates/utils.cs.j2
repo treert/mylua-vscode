@@ -1,0 +1,15 @@
+{% macro gen_struct(item) %}
+{% if item.documentation %}
+/// <summary>
+{%set lines = item.documentation.split('\n')%}
+{%for line in lines %}
+/// {{line}}
+{%endfor%}
+/// </summary>
+{% endif %}
+public class {{item.name}} {
+    {% for prop in item.properties %}
+    public {{prop.typename}}{{ item.canbenull and '?' }} {{ prop.name }} { get; set; }
+    {% endfor %}
+}
+{% endmacro %}

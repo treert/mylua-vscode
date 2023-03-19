@@ -1,0 +1,6 @@
+[*.cs]
+end_of_line = lf
+
+[*.cs.j2]
+end_of_line = lf
+
