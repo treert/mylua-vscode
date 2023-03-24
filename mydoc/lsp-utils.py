@@ -88,20 +88,24 @@ def print_debug_info():
 
     pp('metaData')
     pp('**.kind')
+    pp('structures.**.[kind=base].name')
+    pp('**.[kind=map].key.kind')
+    # pp('structures.**.[kind=literal]')
+    pp('structures.**.[kind=stringLiteral].value')
     # xx = pp('**.[kind=base,kind=literal,kind=stringLiteral].[name]')
     # xx = pp('**.[kind=literal,kind=stringLiteral]')
-    pp("**[kind=tuple]")
-    pp("**[kind=or]")
+    # pp("**[kind=tuple]")
+    # pp("**[kind=or]")
 
     # print(xx[0])
-    pp('**.[kind=or].items.*.kind')
+    # pp('**.[kind=or].items.*.kind')
     # extends = pp('**.extends')
     # for it in extends:
     #     if len(it) > 1:
     #         print(it)
 
-    pp('structures.*.[name=TextDocumentPositionParams,name=WorkDoneProgressParams]')
-    pp('structures.*.[name=TextDocumentRegistrationOptions]')
+    # pp('structures.*.[name=TextDocumentPositionParams,name=WorkDoneProgressParams]')
+    # pp('structures.*.[name=TextDocumentRegistrationOptions]')
 
 
 if __name__ == "__main__":
