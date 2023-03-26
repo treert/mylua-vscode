@@ -10,13 +10,24 @@ import utils
 
 WorkDir = os.path.abspath(os.path.dirname(__file__))
 
+MyLiteralTypeIdx = 1
 def mod_typeinfo(js:dict):
+    if not js:
+        return
     kind = js['kind']
     match kind:
         case 'or':
             tmap:dict = {}
+            sub_types:list[str] = []
+            for it in js['items']:
+                mod_typeinfo(it)
+                if it.get('is_null', False):
+                    sub_types.append('null')
+                else:
+                    sub_types.append(it['cs_typename'])
             
             js['cs_typename'] = 'MyNode'
+            js['or_type_list_doc'] = f"or types = [{','.join(sub_types)}]"
 
             pass
         case 'reference':
@@ -30,6 +41,7 @@ def mod_typeinfo(js:dict):
             match js['name']:
                 case 'null':
                     js['is_null'] = True
+                    js['cs_typename'] = 'MyNode'
                     pass
                 case 'DocumentUri':
                     js['cs_typename'] = 'DocumentUri'
@@ -58,18 +70,59 @@ def mod_typeinfo(js:dict):
                     pass
             pass
         case 'and':
-            # 只有 method textDocument/colorPresentation 使用了。也许有什么用吧
+            # 只有 method textDocument/colorPresentation 的 registrationOptions 里使用了。
+            # 也许有什么用吧，现在对我没有用
             js['cs_typename'] = 'MyNode'
             pass
         case 'map':
+            # 只有 6 个
+            mod_typeinfo(js['key'])
+            mod_typeinfo(js['value'])
+            js['cs_typename'] = f"Dictionary<{js['key']['cs_typename']},{js['value']['cs_typename']}>"
             pass
         case 'literal':
+            # 有 54 个，其中 37 个不同。 太麻烦了，就简单处理吧
+            js['cs_typename'] = 'MyNode'
             pass
         case 'stringLiteral':
+            # const string, do nothing
             pass
         case 'tuple':
-            return "MyNode"
+            # only one. current is int[2]
+            js['cs_typename'] = 'MyNode'
             pass
+
+def mod_struct(it):
+    for prop in it['properties']:
+        mod_typeinfo(prop['type'])
+
+def mod_request(it):
+    mod_typeinfo(it.get('params'))
+    mod_typeinfo(it.get('result'))
+    mod_typeinfo(it.get('partialResult'))
+
+    mod_typeinfo(it.get('registrationOptions'))
+
+    if it['messageDirection'] == 'clientToServer':
+        it['cs_messageDirection'] = 'MessageDirection.ClientToServer'
+    elif it['messageDirection'] == 'serverToClient':
+        it['cs_messageDirection'] = 'MessageDirection.ServerToClient'
+    else:
+        it['cs_messageDirection'] = 'MessageDirection.Both'
+
+def mod_notify(it):
+    mod_typeinfo(it.get('params'))
+    mod_typeinfo(it.get('registrationOptions'))
+
+    if it['messageDirection'] == 'clientToServer':
+        it['cs_messageDirection'] = 'MessageDirection.ClientToServer'
+    elif it['messageDirection'] == 'serverToClient':
+        it['cs_messageDirection'] = 'MessageDirection.ServerToClient'
+    else:
+        it['cs_messageDirection'] = 'MessageDirection.Both'
+
+def mod_enum(it):
+    mod_typeinfo(it['type'])
 
 
 def gen_structs(items):

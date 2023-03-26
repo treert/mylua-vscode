@@ -51,6 +51,11 @@ namespace MyServer.Protocol
             return m_uri.ToString();
         }
 
+        public override int GetHashCode()
+        {
+            return m_uri.GetHashCode();
+        }
+
         private Uri m_uri;
     }
 

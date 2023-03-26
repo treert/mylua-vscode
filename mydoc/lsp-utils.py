@@ -88,7 +88,10 @@ def print_debug_info():
 
     pp('metaData')
     pp('**.kind')
+    pp('**.messageDirection')
+    pp('notifications.**.messageDirection')
     pp('structures.**.[kind=base].name')
+    pp('enumerations.*.type.name')
     pp('**.[kind=map].key.kind')
     # pp('structures.**.[kind=literal]')
     pp('structures.**.[kind=stringLiteral].value')
