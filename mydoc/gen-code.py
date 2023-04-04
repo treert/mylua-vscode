@@ -19,15 +19,19 @@ def mod_typeinfo(js:dict):
         case 'or':
             tmap:dict = {}
             sub_types:list[str] = []
+            can_be_null = False
             for it in js['items']:
                 mod_typeinfo(it)
                 if it.get('is_null', False):
-                    sub_types.append('null')
+                    can_be_null = True
                 else:
                     sub_types.append(it['cs_typename'])
             
             js['cs_typename'] = 'MyNode'
-            js['or_type_list_doc'] = f"or types = [{','.join(sub_types)}]"
+            if can_be_null:
+                js['or_type_list_doc'] = f"[null,{','.join(sub_types)}]"
+            else:
+                js['or_type_list_doc'] = f"[{','.join(sub_types)}]"
 
             pass
         case 'reference':
@@ -124,6 +128,15 @@ def mod_notify(it):
 def mod_enum(it):
     mod_typeinfo(it['type'])
 
+def mod_all_json(data):
+    for it in data['requests']:
+        mod_request(it)
+    for it in data['notifications']:
+        mod_notify(it)
+    for it in data['structures']:
+        mod_struct(it)
+    for it in data['enumerations']:
+        mod_enum(it)
 
 def gen_structs(items):
     tm = ja.get_template("structs.cs.j2")
@@ -132,5 +145,11 @@ def gen_structs(items):
 
 if __name__ == "__main__":
     data = utils.get_model_json()
-    gen_structs(data["structures"])
+    mod_all_json(data)
+
+    jsondata = json.dumps(data, indent=2)
+    path = os.path.join(WorkDir,"gen-code.json")
+    
+    with open(path,"w",encoding="utf-8") as file:
+        file.write(jsondata)
     pass
