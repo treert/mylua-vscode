@@ -10,6 +10,9 @@ import utils
 
 WorkDir = os.path.abspath(os.path.dirname(__file__))
 
+StructMap = {}
+ParentStructMap = {}
+
 MyLiteralTypeIdx = 1
 def mod_typeinfo(js:dict):
     if not js:
@@ -100,6 +103,8 @@ def mod_struct(it):
     for prop in it['properties']:
         mod_typeinfo(prop['type'])
 
+
+
 def mod_request(it):
     mod_typeinfo(it.get('params'))
     mod_typeinfo(it.get('result'))
@@ -128,6 +133,34 @@ def mod_notify(it):
 def mod_enum(it):
     mod_typeinfo(it['type'])
 
+def mod_2_struct(it:dict):
+    if it.__contains__('cs_properties'):
+        return
+    cs_properties = []
+    def add_ext(ext_it):
+        ext_name = ext_it['name']
+        ext = StructMap[ext_name]
+        ext['cs_is_parent'] = True
+        ParentStructMap[ext_name] = ext
+        mod_2_struct(ext)
+        for p in ext['cs_properties']:
+            p = p.copy()
+            p['cs_ext_from'] = ext_name
+            cs_properties.append(p)
+        pass
+    
+    if extends := it.get('extends'):
+        for ext_it in extends:
+            add_ext(ext_it)
+    if mixins := it.get('mixins'):
+        for ext_it in mixins:
+            add_ext(ext_it)
+
+    for p in it['properties']:
+        cs_properties.append(p)
+    
+    it['cs_properties'] = cs_properties
+
 def mod_all_json(data):
     for it in data['requests']:
         mod_request(it)
@@ -135,8 +168,14 @@ def mod_all_json(data):
         mod_notify(it)
     for it in data['structures']:
         mod_struct(it)
+        StructMap[it['name']] = it
     for it in data['enumerations']:
         mod_enum(it)
+
+    for name,it in StructMap.items():
+        mod_2_struct(it)
+    
+    data['cs_parents'] = ParentStructMap
 
 def gen_structs(items):
     tm = ja.get_template("structs.cs.j2")
