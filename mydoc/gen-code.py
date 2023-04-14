@@ -31,10 +31,13 @@ def mod_typeinfo(js:dict):
                     sub_types.append(it['cs_typename'])
             
             js['cs_typename'] = 'MyNode'
+
             if can_be_null:
-                js['or_type_list_doc'] = f"[null,{','.join(sub_types)}]"
+                js['or_type_list_doc'] = f"MyNode<null,{','.join(sub_types)}>"
             else:
-                js['or_type_list_doc'] = f"[{','.join(sub_types)}]"
+                js['or_type_list_doc'] = f"MyNode<{','.join(sub_types)}>"
+            
+            js['documentation'] = js.get('documentation',"")  + '\n' + js['or_type_list_doc']
 
             pass
         case 'reference':
@@ -93,6 +96,7 @@ def mod_typeinfo(js:dict):
             pass
         case 'stringLiteral':
             # const string, do nothing
+            js['cs_typename'] = 'string'
             pass
         case 'tuple':
             # only one. current is int[2]
@@ -102,6 +106,10 @@ def mod_typeinfo(js:dict):
 def mod_struct(it):
     for prop in it['properties']:
         mod_typeinfo(prop['type'])
+        if prop['name'] in ['event']:
+            prop['cs_name'] = '@'+prop['name']
+        else:
+            prop['cs_name'] = prop['name']
 
 
 
@@ -139,8 +147,15 @@ def mod_2_struct(it:dict):
     cs_properties = []
     def add_ext(ext_it):
         ext_name = ext_it['name']
+        if not it.__contains__('cs_parents'):
+            it['cs_parents'] = []
+        it['cs_parents'].append(ext_name)
         ext = StructMap[ext_name]
-        ext['cs_is_parent'] = True
+        if not ext.__contains__('cs_is_parent'):
+            ext['cs_is_parent'] = True
+            if not ext.__contains__('cs_parents'):
+                ext['cs_parents'] = []
+            ext['cs_parents'].insert(0, ext_name)
         ParentStructMap[ext_name] = ext
         mod_2_struct(ext)
         for p in ext['cs_properties']:
@@ -175,20 +190,36 @@ def mod_all_json(data):
     for name,it in StructMap.items():
         mod_2_struct(it)
     
-    data['cs_parents'] = ParentStructMap
+    for _,it in StructMap.items():
+        if it.__contains__('cs_parents'):
+            it['cs_parents_str'] = 'I' + ',I'.join(it['cs_parents'])
+    
+    # data['cs_parents'] = ParentStructMap
+
+def print_content(content,filename):
+    path = os.path.join(WorkDir,filename)
+    path = os.path.abspath(path)
+    dir = os.path.dirname(path)
+    os.makedirs(dir, exist_ok=True)
+
+    with open(path,"w",encoding="utf-8") as file:
+        file.write(content)
+    pass
 
 def gen_structs(items):
     tm = ja.get_template("structs.cs.j2")
-    content = tm.render(items=items[:3])
-    print(content)
+    content = tm.render(items=items)
+    # print_content(content, '../myserver/myserver/Protocol/Structs.cs')
+    print_content(content, 'gen-code.cs')
+
+
 
 if __name__ == "__main__":
     data = utils.get_model_json()
     mod_all_json(data)
 
-    jsondata = json.dumps(data, indent=2)
-    path = os.path.join(WorkDir,"gen-code.json")
-    
-    with open(path,"w",encoding="utf-8") as file:
-        file.write(jsondata)
-    pass
+    print_content(json.dumps(data, indent=2),'gen-code.json')
+
+    gen_structs(data['structures'])
+
+

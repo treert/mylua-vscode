@@ -1,15 +1,33 @@
-{% macro gen_struct(item) %}
-{% if item.documentation %}
+{% macro print_doc(documentation) %}
+{% if documentation %}
 /// <summary>
-{%set lines = item.documentation.split('\n')%}
+{%set lines = documentation.split('\n')%}
 {%for line in lines %}
 /// {{line}}
 {%endfor%}
 /// </summary>
-{% endif %}
-public class {{item.name}} {
-    {% for prop in item.properties %}
-    public {{prop.typename}}{{ item.canbenull and '?' }} {{ prop.name }} { get; set; }
+{%-endif %}
+{%endmacro %}
+
+{% macro gen_struct(item) %}
+{%if item.cs_is_parent %}
+{{ print_doc(item.documentation)}}
+public interface I{{item.name}} {
+    {% for prop in item.cs_properties %}
+
+    {{ print_doc(prop.documentation) | indent }}
+    public {{prop.type.cs_typename}}{{ item.optional and '?' }} {{ prop.cs_name }} { get; set; }
+    {% endfor %}
+}
+
+{%endif %}
+{{ print_doc(item.documentation)}}
+public class {{item.name}}{%if item.cs_parents_str %}: {{item.cs_parents_str}}{%endif%}{
+    {% for prop in item.cs_properties %}
+
+    {{ print_doc(prop.documentation) | indent }}
+    public {{prop.type.cs_typename}}{{ item.optional and '?' }} {{ prop.cs_name }} { get; set; }
+    {%- if prop.type.kind == 'stringLiteral' %} = "{{ prop.type.value }}"; {% endif +%}
     {% endfor %}
 }
 {% endmacro %}

@@ -95,6 +95,8 @@ def print_debug_info():
     pp('**.[kind=map].key.kind')
     # pp('structures.**.[kind=literal]')
     pp('structures.**.[kind=stringLiteral].value')
+    pp('typeAliases.*.*.kind')
+    pp('typeAliases.*')
     # xx = pp('**.[kind=base,kind=literal,kind=stringLiteral].[name]')
     # xx = pp('**.[kind=literal,kind=stringLiteral]')
     # pp("**[kind=tuple]")
