@@ -1,9 +1,16 @@
 // auto generate, do not modify it.
+using MyServer.Misc;
 
-namespace Protocol;
+namespace MyServer.Protocol;
 
 {% import "utils.cs.j2" as utils %}
 
-{% for it in items %}
+// typeAliases
+{% for it in data['typeAliases'] %}
+{{ utils.gen_alias(it) }}
+{% endfor %}
+
+// Structures
+{% for it in data['structures'] %}
 {{ utils.gen_struct(it) }}
 {% endfor %}

@@ -23,5 +23,3 @@ if (true){
     var str = JsonSerializer.Serialize(init_params, serializeOptions);
     Console.WriteLine(str);
 }
-
-Protocol.MessageDirection a = Protocol.MessageDirection.Both

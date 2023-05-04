@@ -28,7 +28,7 @@ namespace MyServer.Protocol
     /// This class describes a document uri as defined by https://microsoft.github.io/language-server-protocol/specifications/specification-current/#uri
     /// </summary>
     [JsonConverter(typeof(DocumentUriJsonConverter))]
-    internal class DocumentUri:IEquatable<DocumentUri>
+    public class DocumentUri:IEquatable<DocumentUri>
     {
         public bool Equals(DocumentUri? other)
         {
@@ -59,7 +59,7 @@ namespace MyServer.Protocol
         private Uri m_uri;
     }
 
-    internal class DocumentUriJsonConverter : JsonConverter<DocumentUri>
+    public class DocumentUriJsonConverter : JsonConverter<DocumentUri>
     {
         public override DocumentUri? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
         {

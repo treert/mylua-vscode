@@ -1,4 +1,5 @@
 import os
+from functools import cmp_to_key
 from urllib.request import urlopen
 import jinja2
 
@@ -12,6 +13,7 @@ WorkDir = os.path.abspath(os.path.dirname(__file__))
 
 StructMap = {}
 ParentStructMap = {}
+EnumMap = {}
 
 MyLiteralTypeIdx = 1
 def mod_typeinfo(js:dict):
@@ -36,8 +38,6 @@ def mod_typeinfo(js:dict):
                 js['or_type_list_doc'] = f"MyNode<null,{','.join(sub_types)}>"
             else:
                 js['or_type_list_doc'] = f"MyNode<{','.join(sub_types)}>"
-            
-            js['documentation'] = js.get('documentation',"")  + '\n' + js['or_type_list_doc']
 
             pass
         case 'reference':
@@ -103,6 +103,10 @@ def mod_typeinfo(js:dict):
             js['cs_typename'] = 'MyNode'
             pass
 
+def add_or_info_to_doc(it:dict,type:dict):
+    if type and type.__contains__('or_type_list_doc'):
+        it['documentation'] = it.get('documentation',"") + '\n' + type['or_type_list_doc']
+
 def mod_struct(it):
     for prop in it['properties']:
         mod_typeinfo(prop['type'])
@@ -110,6 +114,10 @@ def mod_struct(it):
             prop['cs_name'] = '@'+prop['name']
         else:
             prop['cs_name'] = prop['name']
+        if EnumMap.__contains__(prop['type'].get('name',"")):
+            prop['cs_typename'] = EnumMap[prop['type']['name']]['type']['cs_typename']
+        else:
+            prop['cs_typename'] = prop['type']['cs_typename']
 
 
 
@@ -141,6 +149,10 @@ def mod_notify(it):
 def mod_enum(it):
     mod_typeinfo(it['type'])
 
+def mod_alia(it:dict):
+    mod_typeinfo(it['type'])
+    add_or_info_to_doc(it, it['type'])
+
 def mod_2_struct(it:dict):
     if it.__contains__('cs_properties'):
         return
@@ -161,6 +173,7 @@ def mod_2_struct(it:dict):
         for p in ext['cs_properties']:
             p = p.copy()
             p['cs_ext_from'] = ext_name
+            p['documentation'] = p.get('documentation',"") + f"\nextend from {ext_name}"
             cs_properties.append(p)
         pass
     
@@ -177,6 +190,9 @@ def mod_2_struct(it:dict):
     it['cs_properties'] = cs_properties
 
 def mod_all_json(data):
+    for it in data['enumerations']:
+        mod_enum(it)
+        EnumMap[it['name']] = it
     for it in data['requests']:
         mod_request(it)
     for it in data['notifications']:
@@ -184,11 +200,28 @@ def mod_all_json(data):
     for it in data['structures']:
         mod_struct(it)
         StructMap[it['name']] = it
-    for it in data['enumerations']:
-        mod_enum(it)
+
+    for it in data['typeAliases']:
+        mod_alia(it)
+    
+    def comp(it1,it2):
+        name1 = it1['type']['cs_typename']
+        name2 = it2['type']['cs_typename']
+        if '<' in name1:
+            name1 = '~'+name1
+        if '<' in name2:
+            name2 = '~'+name2
+        if name1 < name2:
+            return -1
+        elif name1 > name2:
+            return 1
+        return 0
+    data['typeAliases'] = sorted(data['typeAliases'],key=cmp_to_key(comp))
 
     for name,it in StructMap.items():
         mod_2_struct(it)
+    # for name,it in StructMap.items():
+    #     add_or_info_to_doc(it, it['type'])
     
     for _,it in StructMap.items():
         if it.__contains__('cs_parents'):
@@ -206,11 +239,11 @@ def print_content(content,filename):
         file.write(content)
     pass
 
-def gen_structs(items):
+def gen_structs(data):
     tm = ja.get_template("structs.cs.j2")
-    content = tm.render(items=items)
-    # print_content(content, '../myserver/myserver/Protocol/Structs.cs')
-    print_content(content, 'gen-code.cs')
+    content = tm.render(data=data)
+    print_content(content, '../myserver/myserver/Protocol/Structs.cs')
+    # print_content(content, 'gen-code.cs')
 
 
 
@@ -220,6 +253,6 @@ if __name__ == "__main__":
 
     print_content(json.dumps(data, indent=2),'gen-code.json')
 
-    gen_structs(data['structures'])
+    gen_structs(data)
 
 

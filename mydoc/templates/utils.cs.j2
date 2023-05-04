@@ -16,7 +16,7 @@ public interface I{{item.name}} {
     {% for prop in item.cs_properties %}
 
     {{ print_doc(prop.documentation) | indent }}
-    public {{prop.type.cs_typename}}{{ item.optional and '?' }} {{ prop.cs_name }} { get; set; }
+    public {{prop.cs_typename}}{{ prop.optional and '?' }} {{ prop.cs_name }} { get; set; }
     {% endfor %}
 }
 
@@ -26,8 +26,14 @@ public class {{item.name}}{%if item.cs_parents_str %}: {{item.cs_parents_str}}{%
     {% for prop in item.cs_properties %}
 
     {{ print_doc(prop.documentation) | indent }}
-    public {{prop.type.cs_typename}}{{ item.optional and '?' }} {{ prop.cs_name }} { get; set; }
+    public {{prop.cs_typename}}{{ prop.optional and '?' }} {{ prop.cs_name }} { get; set; }
     {%- if prop.type.kind == 'stringLiteral' %} = "{{ prop.type.value }}"; {% endif +%}
     {% endfor %}
 }
 {% endmacro %}
+
+
+{%macro gen_alias(item)%}
+{{ print_doc(item.documentation)}}
+using {{item.name}} = {{item.type.cs_typename}};
+{%endmacro%}
