@@ -1,3 +1,4 @@
+import { WorkspaceFolder,workspace } from 'vscode';
 import { DebugLogger } from './LogManager';
 import { Tools } from './Tools';
 import * as vscode from 'vscode';
@@ -13,13 +14,41 @@ export class PathManager {
     public LuaPandaPath;   // 用户工程中luapanda.lua文件所在的路径，它在调试器启动时赋值。但也可能工程中不存在luapanda文件导致路径为空
     public CWD;
     public rootFolder;
-    public static rootFolderArray = {}; // name uri
+    public static rootFolderArray = []; // name uri
     private consoleLog;
     private luaDebugInstance;
     public constructor(_luaDebugInstance, _consoleLog){
         this.luaDebugInstance = _luaDebugInstance;
         this.consoleLog = _consoleLog;
     }
+
+    public static init() {
+        this.rootFolderArray = [];
+        if (workspace.workspaceFolders) {
+            this.addOpenedFolder(workspace.workspaceFolders);
+        }
+    }
+    public static addOpenedFolder(newFolders:readonly WorkspaceFolder[]){
+        let rootFolders = PathManager.rootFolderArray;
+        for (const folder of newFolders) {
+            // 测试不会出现重复添加的情况
+            rootFolders.push(folder.uri.fsPath);
+            // rootFolders.push(Tools.uriToPath(folder.uri));
+        }
+    }
+
+    public static removeOpenedFolder(beDelFolders:readonly WorkspaceFolder[]){
+        let rootFolders = PathManager.rootFolderArray;
+        for (const folder of beDelFolders) {
+            for(let idx =0; idx < rootFolders.length; idx++ ){
+                if (folder.uri.fsPath === rootFolders[idx]) {
+                    rootFolders.splice(idx , 1);
+                    break;
+                }
+            }
+        }
+    }
+
 
     // 建立/刷新 工程下文件名-路径Map
     public rebuildWorkspaceNamePathMap(rootPath : string){

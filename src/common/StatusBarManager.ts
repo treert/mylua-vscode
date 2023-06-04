@@ -38,6 +38,6 @@ export class StatusBarManager {
 
     //按钮恢复到初始状态
     public static reset() {
-
+        this.MemStateBar.hide();
     }
 }

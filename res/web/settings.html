@@ -81,64 +81,8 @@
         onclick="startAndroidReverse();" />
     <br>
 
-    <label class="lab"><font size="3" face="Arial">lua代码辅助功能: </font></label>
-    <div class="onoffswitch" style="margin:20px">
-        <input type="checkbox" name="onoffswitch" class="onoffswitch-checkbox" id="luaAnalyzerSwitch"" onclick="changeLuaAnalyzerSwitch();">
-        <label class="onoffswitch-label" for="luaAnalyzerSwitch">
-            <span class="onoffswitch-inner"></span>
-            <span class="onoffswitch-switch"></span>
-        </label>
-    </div> 
-
-    <br>
-    <label class="lab" style="margin:10px 0px" title="分析CPP文件，生成对应的lua文件用于代码补全"><font size="3" face="Arial">用于IntelliSense的文件夹路径:  </font></label>&nbsp;&nbsp;&nbsp;<input style="margin:5px" id="preAnalysisPath"
-    type="text" name="lname" /> <input class="btn_st" style="margin:20px" type="button" value="生成文件" onclick="preProcess();" />
-    <!-- <input class="btn_st2" style="margin:10px" type="button" value="清除生成文件" onclick="clearPreProcessFile();" /> -->
-    <br />
-    <label style="margin:30px 0px 10px 15%">目前可用于生成 slua / slua-unreal 的导出符号</label>
-    
-    <br />
-    <br>
-
     <script>
         const vscode = acquireVsCodeApi();
-        function preProcess(){
-            let preAnalysisPath = document.getElementById('preAnalysisPath');
-            let saveObj = new Object();
-            saveObj["command"] = "preAnalysisCpp";
-            saveObj["path"] = preAnalysisPath.value;
-            let webInfo = JSON.stringify(saveObj);
-            vscode.postMessage({
-                webInfo
-            });
-        }
-
-        function clearPreProcessFile(){
-            let saveObj = new Object();
-            saveObj["command"] = "clearPreProcessFile";
-            let webInfo = JSON.stringify(saveObj);
-            vscode.postMessage({
-                webInfo
-            });
-        } 
-
-        function changeLuaAnalyzerSwitch()
-        {
-            let switchStatus;
-            if (document.getElementById('luaAnalyzerSwitch').checked) 
-            {
-                switchStatus = true;
-            } else {
-                switchStatus = false;
-            }
-            let saveObj = new Object();
-            saveObj["command"] = "on_off_analyzer";
-            saveObj["switch"] = switchStatus;
-            let webInfo = JSON.stringify(saveObj);
-            vscode.postMessage({
-                webInfo
-            });
-        }
 
         function startAndroidReverse() {
             let luapanda = new Object();
@@ -275,12 +219,6 @@
                     setCheckboxStatue("updateTips", true);
                 } else {
                     setCheckboxStatue("updateTips", target["updateTips"]);
-                }           
-
-                if (global_configs["isOpenAnalyzer"] == undefined) {
-                    setCheckboxStatue("luaAnalyzerSwitch", true);
-                } else {
-                    setCheckboxStatue("luaAnalyzerSwitch", global_configs["isOpenAnalyzer"]);
                 }
         }
 
@@ -315,7 +253,6 @@
             switch (message.command) {
                 case 'init_setting':
                     global_configs = message.configs;
-                    global_configs["isOpenAnalyzer"] = message["isOpenAnalyzer"];
 
                     init_select_opt();
                     select_setting();

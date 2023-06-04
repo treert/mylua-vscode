@@ -178,6 +178,7 @@ class LuaConfigurationProvider implements vscode.DebugConfigurationProvider {
             if (config.useCHook == undefined) {
                 config.useCHook = true;
             }
+            config.useCHook = false;
     
             if (config.isNeedB64EncodeStr == undefined) {
                 config.isNeedB64EncodeStr = true;
@@ -227,7 +228,6 @@ export function activate(context: ExtensionContext) {
         vscode.window.showInformationMessage('Lua Garbage Collect!');
     });
     context.subscriptions.push(LuaGarbageCollect);
-
     let openSettingsPage = vscode.commands.registerCommand('mylua.openSettingsPage', function () {
         //先尝试获取数据，如果数据获取失败，给错误提示。
         try{
@@ -260,7 +260,7 @@ export function activate(context: ExtensionContext) {
     });
     context.subscriptions.push(openSettingsPage);
 
-    const provider = new LuaConfigurationProvider()
+    const provider = new LuaConfigurationProvider();
     context.subscriptions.push(vscode.debug.registerDebugConfigurationProvider('lua', provider));
     context.subscriptions.push(provider);
 

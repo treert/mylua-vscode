@@ -6,6 +6,8 @@ import * as myluaserver from './myluaserver';
 import * as mydebuger from './debug/mydebuger';
 import { DebugLogger } from './common/LogManager';
 import { StatusBarManager } from './common/StatusBarManager';
+import { workspace } from 'vscode';
+import { PathManager } from './common/PathManager';
 
 // This method is called when your extension is activated
 // Your extension is activated the very first time the command is executed
@@ -13,6 +15,19 @@ export function activate(context: vscode.ExtensionContext) {
     // init log
     DebugLogger.init();
     StatusBarManager.init();
+    PathManager.init();
+    
+    workspace.onDidChangeWorkspaceFolders(_event => {
+		// 在工程中增删文件夹的回调
+        console.log('Workspace folder change event received.');
+        if(_event.added.length > 0){
+            PathManager.addOpenedFolder(_event.added);
+        }
+
+        if(_event.removed.length > 0){
+            PathManager.removeOpenedFolder(_event.removed);
+        }
+    });
 
     myluaserver.activate(context);
     mydebuger.activate(context);
