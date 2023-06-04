@@ -7,9 +7,9 @@ using Protocol = MyServer.Protocol;
 Console.WriteLine("Hello, World!");
 Console.WriteLine($"pwd={Environment.CurrentDirectory}");
 
-//MySession.RunServer(40080);
+MySession.RunServer(40080);
 
-if (true){
+if (false){
     var jsonstr = File.ReadAllText("tmp/initialize.jsonc");
     var msg = JsonNode.Parse(jsonstr);
     var init_json = msg!["params"];

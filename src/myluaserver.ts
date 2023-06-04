@@ -114,12 +114,11 @@ class MyLuaClient {
             disposable.dispose();
         }
     }
-
     statusBar() {
         let client = this.client;
-        let bar = window.createStatusBarItem();
+        let bar = window.createStatusBarItem(vscode.StatusBarAlignment.Left);
         bar.text = 'mylua';
-        bar.command = 'mylua.statusBar';
+        bar.command = 'mylua.helloWorld';
         this.disposables.push(Commands.registerCommand(bar.command, () => {
             client.sendNotification('$/status/click');
         }));
