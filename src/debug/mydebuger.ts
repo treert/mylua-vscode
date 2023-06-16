@@ -1,12 +1,10 @@
 import * as vscode from "vscode";
 import * as Net from 'net';
-import * as path from 'path';
 import { LuaDebugSession } from './luaDebug';
 import { DebugLogger } from '../common/LogManager';
-import { StatusBarManager } from '../common/StatusBarManager';
 import { Tools } from '../common/Tools';
 
-import { workspace, ExtensionContext } from 'vscode';
+import { ExtensionContext } from 'vscode';
 import { VisualSetting } from './visualSetting';
 import { PathManager } from '../common/PathManager';
 

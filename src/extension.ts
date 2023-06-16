@@ -16,6 +16,8 @@ export function activate(context: vscode.ExtensionContext) {
     DebugLogger.init();
     StatusBarManager.init();
     PathManager.init();
+
+    StatusBarManager.ShowMain('💚mylua');
     
     workspace.onDidChangeWorkspaceFolders(_event => {
 		// 在工程中增删文件夹的回调
@@ -39,10 +41,8 @@ export function activate(context: vscode.ExtensionContext) {
 	// The command has been defined in the package.json file
 	// Now provide the implementation of the command with registerCommand
 	// The commandId parameter must match the command field in package.json
-	let disposable = vscode.commands.registerCommand('mylua.helloWorld', () => {
-		// The code you place here will be executed every time your command is executed
-		// Display a message box to the user
-		vscode.window.showInformationMessage('Hello World from mylua!');
+	let disposable = vscode.commands.registerCommand('mylua.status.bar.click', () => {
+        vscode.commands.executeCommand("mylua.openSettingsPage");
 	});
 
 	context.subscriptions.push(disposable);

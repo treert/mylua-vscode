@@ -25,7 +25,7 @@
         "ignoreDeprecations": "5.0",
 		"noImplicitAny": false,
 		"removeComments": true,
-		"noUnusedLocals": true,
+		"noUnusedLocals": false,
 		"noImplicitThis": true,
 		"inlineSourceMap": false,
 		"preserveConstEnums": true,

@@ -1,6 +1,3 @@
-import * as path from 'path';
-import * as os from 'os';
-import * as fs from 'fs';
 import * as net from 'net';
 import * as vscode from 'vscode';
 import {
@@ -17,8 +14,6 @@ import {
     LanguageClientOptions,
     ServerOptions,
     DocumentSelector,
-    ClientCapabilities,
-    TextDocumentClientCapabilities,
     StreamInfo,
 } from 'vscode-languageclient/node';
 
@@ -55,7 +50,7 @@ class MyLuaClient {
     public client!: LanguageClient;
     private disposables = new Array<Disposable>();
 
-    constructor(private context: ExtensionContext,
+    constructor(private _context: ExtensionContext,
         private documentSelector: DocumentSelector) {
     }
 
