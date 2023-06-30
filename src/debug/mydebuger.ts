@@ -213,11 +213,6 @@ class LuaConfigurationProvider implements vscode.DebugConfigurationProvider {
 }
 
 export function activate(context: ExtensionContext) {
-    // reloadWindow
-    let reloadWindow = vscode.commands.registerCommand('mylua.reloadLuaDebug', function () {
-        vscode.commands.executeCommand("workbench.action.reloadWindow")
-    });
-    context.subscriptions.push(reloadWindow);
     // force garbage collect
     let LuaGarbageCollect = vscode.commands.registerCommand('mylua.LuaGarbageCollect', function () {
         for (var [ , instance] of LuaDebugSession.debugSessionArray) {
