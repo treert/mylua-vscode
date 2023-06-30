@@ -36,10 +36,6 @@
     ],
     "commands": [
       {
-        "command": "mylua.reloadLuaDebug",
-        "title": "Reload LuaPanda"
-      },
-      {
         "command": "mylua.LuaGarbageCollect",
         "title": "LuaGarbageCollect"
       },
@@ -51,7 +47,7 @@
     "debuggers": [
 			{
 				"type": "lua",
-				"label": "LuaPanda",
+				"label": "MyLua",
 				"program": "./out/debug/debugAdapter.js",
 				"runtime": "node",
 				"configurationAttributes": {
@@ -309,7 +305,7 @@
 						"type": "lua",
 						"request": "launch",
 						"tag": "normal",
-						"name": "LuaPanda",
+						"name": "MyLua",
 						"description": "通用模式,通常调试项目请选择此模式 | launchVer:3.2.0",
 						"cwd": "${workspaceFolder}",
 						"luaFileExtension": "",

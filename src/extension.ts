@@ -8,6 +8,7 @@ import { DebugLogger } from './common/LogManager';
 import { StatusBarManager } from './common/StatusBarManager';
 import { workspace } from 'vscode';
 import { PathManager } from './common/PathManager';
+import { Tools } from './common/Tools';
 
 // This method is called when your extension is activated
 // Your extension is activated the very first time the command is executed
@@ -16,6 +17,11 @@ export function activate(context: vscode.ExtensionContext) {
     DebugLogger.init();
     StatusBarManager.init();
     PathManager.init();
+
+    // 静态公共变量赋值
+    let pkg = require( context.extensionPath + "/package.json");
+    Tools.adapterVersion = pkg.version;
+    Tools.VSCodeExtensionPath = context.extensionPath;
 
     StatusBarManager.ShowMain('💚mylua');
     

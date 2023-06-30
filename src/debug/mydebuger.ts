@@ -262,10 +262,7 @@ export function activate(context: ExtensionContext) {
     context.subscriptions.push(vscode.debug.registerDebugConfigurationProvider('lua', provider));
     context.subscriptions.push(provider);
 
-    // 静态公共变量赋值
-    let pkg = require( context.extensionPath + "/package.json");
-    Tools.adapterVersion = pkg.version;
-    Tools.VSCodeExtensionPath = context.extensionPath;
+
 
 }
 
