@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import { StatusBarItem } from 'vscode';
+import { Tools } from './Tools';
 
 export class StatusBarManager {
 
@@ -26,6 +27,9 @@ export class StatusBarManager {
     }
     
     public static ShowMain(message: string) {
+        if (Tools.context.extensionMode !== vscode.ExtensionMode.Production) {
+            message += ` ${Tools.context.extensionMode}`;
+        }
         this.MainBar.text = message;
         this.MainBar.show();
     }

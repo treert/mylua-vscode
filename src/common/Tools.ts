@@ -4,6 +4,8 @@ import URI from 'vscode-uri';
 let path = require("path");
 
 export class Tools {
+    public static context: vscode.ExtensionContext;
+
     public static extMap;  // 可处理的文件后缀列表
     public static adapterVersion;  //赋值放在了插件初始化时
     public static VSCodeExtensionPath;  // VSCode插件所在路径，插件初始化时就会被赋值.

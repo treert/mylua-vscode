@@ -7,6 +7,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Text.RegularExpressions;
 using static System.Runtime.InteropServices.JavaScript.JSType;
+using System.Text.Json.Nodes;
 
 namespace myserver
 {
@@ -135,8 +136,9 @@ namespace myserver
                         _bodyLength = -1;
 
                         var content = Encoding.GetString(buf);
+                        var json = JsonNode.Parse(content)!;
 
-                        Log(content);
+                        Log(json.ToJsonString());
 
                         continue;   // there may be more complete messages to process
                     }
