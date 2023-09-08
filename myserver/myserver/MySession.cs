@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using System.Text.RegularExpressions;
 using static System.Runtime.InteropServices.JavaScript.JSType;
 using System.Text.Json.Nodes;
+using MyServer.Misc;
 
 namespace myserver
 {
@@ -58,7 +59,7 @@ namespace myserver
                                 }
                             }
                             clientSocket.Close();
-                            Console.Error.WriteLine(">> client connection closed");
+                            My.Logger.Error(">> client connection closed");
                         }).Start();
                     }
                 }

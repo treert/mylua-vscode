@@ -1,16 +1,18 @@
 ﻿// See https://aka.ms/new-console-template for more information
 using myserver;
+using MyServer.Misc;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Protocol = MyServer.Protocol;
 
-Console.WriteLine("Hello, World!");
-Console.WriteLine($"pwd={Environment.CurrentDirectory}");
+My.Logger.Info("Hello World");
+My.Logger.Info($"pwd={Environment.CurrentDirectory}");
 
 MySession.RunServer(40080);
 
 if (false){
     var jsonstr = File.ReadAllText("tmp/initialize.jsonc");
+    JsonDocument.Parse(jsonstr);
     var msg = JsonNode.Parse(jsonstr);
     var init_json = msg!["params"];
     var init_str = init_json!.ToJsonString();

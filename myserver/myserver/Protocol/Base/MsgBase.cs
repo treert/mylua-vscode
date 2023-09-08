@@ -23,7 +23,8 @@ namespace MyServer.Protocol
         }
     }
 
-    public record MyId : IEquatable<long>, IEquatable<string>, IJson
+    // lsp 里定义的一些 id: integer | string;
+    public partial record MyId : IEquatable<long>, IEquatable<string>
     {
         private long? _long;
         private string? _string;
@@ -74,38 +75,6 @@ namespace MyServer.Protocol
         private string DebuggerDisplay => IsString ? String : IsLong ? Long.ToString() : "";
 
         public override string ToString() => DebuggerDisplay;
-
-        public void ReadFrom(JsonNode node)
-        {
-            if(node.AsValue().TryGetValue<string>(out _string))
-            {
-                _long = node.AsValue().GetValue<long>();
-            }
-        }
-
-        public void WriteTo(JsonNode node)
-        {
-            if (IsLong)
-            {
-                node["id"] = Long;
-            }
-            else
-            {
-                node["id"] = String;
-            }
-        }
-
-        public JsonNode ToJsonNode()
-        {
-            if (IsLong)
-            {
-                return Long;
-            }
-            else
-            {
-                return String!;
-            }
-        }
     }
 
     public class RequestMsg : MsgBase
@@ -237,4 +206,17 @@ namespace MyServer.Protocol
         public const int ContentModified = -32801;
     }
 
+    public class WorkspaceFolder
+    {
+        public Uri uri;
+        public string name;
+    }
+
+    public class InitArgs
+    {
+        public int? processId;
+        public (string name,string? version)? xx;
+        public string? locale;
+        public JsonNode? initializationOptions;
+    }
 }
