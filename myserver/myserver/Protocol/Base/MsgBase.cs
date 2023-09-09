@@ -1,6 +1,7 @@
 ﻿using MyServer.JsonRpc;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Text.Json.Nodes;
@@ -8,48 +9,33 @@ using System.Threading.Tasks;
 
 namespace MyServer.Protocol
 {
-    public class MsgBase : IJson
-    {
-        public string jsonrpc;
-
-        public virtual void ReadFrom(JsonNode node)
-        {
-            jsonrpc = node["jsonrpc"]!.GetValue<string>();
-        }
-
-        public JsonNode ToJsonNode()
-        {
-            return jsonrpc!;
-        }
-    }
-
     // lsp 里定义的一些 id: integer | string;
-    public partial record MyId : IEquatable<long>, IEquatable<string>
+    public partial record MyId : IEquatable<int>, IEquatable<string>
     {
-        private long? _long;
+        private int? _number;
         private string? _string;
 
-        public MyId(long value)
+        public MyId(int value)
         {
-            _long = value;
+            _number = value;
             _string = null;
         }
 
         public MyId(string value)
         {
-            _long = null;
+            _number = null;
             _string = value;
         }
 
-        public bool IsLong => _long.HasValue;
+        public bool IsNumber => _number.HasValue;
 
-        public long Long
+        public int Number
         {
-            get => _long ?? 0;
+            get => _number ?? 0;
             set
             {
                 _string = null;
-                _long = value;
+                _number = value;
             }
         }
 
@@ -61,83 +47,36 @@ namespace MyServer.Protocol
             set
             {
                 _string = value;
-                _long = null;
+                _number = null;
             }
         }
 
-        public static implicit operator MyId(long value) => new MyId(value);
+        public static implicit operator MyId(int value) => new MyId(value);
 
         public static implicit operator MyId(string value) => new MyId(value);
 
-        public bool Equals(long other) => IsLong && _long == other;
+        public bool Equals(int other) => IsNumber && _number == other;
         public bool Equals(string? other) => IsString && _string == other;
 
-        private string DebuggerDisplay => IsString ? String : IsLong ? Long.ToString() : "";
+        private string DebuggerDisplay => IsString ? String : IsNumber ? Number.ToString() : "";
 
         public override string ToString() => DebuggerDisplay;
-    }
-
-    public class RequestMsg : MsgBase
-    {
-        public MyId id;
-        public string method;
-        public IJson? args;
-
-        public static void F()
-        {
-            RequestMsg msg = new RequestMsg();
-            msg.id = 12;
-            Dictionary<MyId, string> a = new Dictionary<MyId, string>()
-            {
-                {1,"2341" },
-            };
-        }
-    }
-
-    public abstract class MyRpc<T1,T2> where T1 : IJson where T2 : IJson
-    {
-        public T1 request;
-        public T2? response;
-
-        public abstract Task Process();
-    }
-
-    public class InitRpc : MyRpc<ResponseMsg, ResponseMsg>
-    {
-        public override async Task Process()
-        {
-            await Task.Delay(500);
-        }
-    }
-
-    public class ResponseMsg : MsgBase
-    {
-        public int id;
-        public IJson? result;
-        public IJson? error;
     }
 
     public class ResponseError
     {
         public int code;
         public string message;
-        public IJson? data;
-    }
-
-    public class NotifyMsg : MsgBase
-    {
-        public string message;
-        public IJson? data;
+        public JsonNode? data;
     }
 
     public class CancelParams{
         public int id;
     }
 
-
     public record ProgressToken : MyId
     {
-        public ProgressToken(long value) : base(value)
+        public ProgressToken(int value) : base(value)
         {
         }
 
@@ -212,11 +151,50 @@ namespace MyServer.Protocol
         public string name;
     }
 
-    public class InitArgs
+    public class InitArgs : IJson
     {
         public int? processId;
-        public (string name,string? version)? xx;
+        public (string name,string? version)? clientInfo;
         public string? locale;
         public JsonNode? initializationOptions;
+
+        public void ReadFrom(JsonNode? node)
+        {
+            Debug.Assert(node != null);
+            processId = node["processId"]?.GetValue<int>();
+            var clientInfo_node = node["clientInfo"];
+            if (clientInfo_node != null)
+            {
+                var name = clientInfo_node["name"]!.GetValue<string>();
+                var version = clientInfo_node["version"]?.GetValue<string>();
+                clientInfo = (name,version);
+            }
+            locale = node["locale"]?.GetValue<string>();
+        }
+
+        public JsonNode? ToJsonNode()
+        {
+            throw new NotImplementedException();
+        }
     }
+
+    public class InitResult : IJson
+    {
+        public (string name, string? version)? serverInfo;
+
+        public void ReadFrom(JsonNode? node)
+        {
+            throw new NotImplementedException();
+        }
+
+        public JsonNode? ToJsonNode()
+        {
+            throw new NotImplementedException();
+        }
+    }
+
+    //public class  InitRpc:JsonRpcBase<InitArgs, InitResult>
+    //{
+        
+    //}
 }

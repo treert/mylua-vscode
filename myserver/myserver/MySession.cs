@@ -9,29 +9,21 @@ using System.Text.RegularExpressions;
 using static System.Runtime.InteropServices.JavaScript.JSType;
 using System.Text.Json.Nodes;
 using MyServer.Misc;
+using MyServer.Protocol;
 
 namespace myserver
 {
-    internal class MySession
+    public class MySession
     {
+        public static MySession Instance = new MySession();
         public static void RunSession(Stream inputStream, Stream outputStream)
         {
-            var session = new MySession();
             try
             {
-                session.Start(inputStream, outputStream).Wait();
+                MySession.Instance.Start(inputStream, outputStream).Wait();
             }
             catch { }
-            finally
-            {
 
-                if (logFile != null)
-                {
-                    logFile.Flush();
-                    logFile.Close();
-                    logFile = null;
-                }
-            }
         }
         public static void RunServer(int port)
         {
@@ -83,6 +75,7 @@ namespace myserver
 
         protected const int BUFFER_SIZE = 4096;
         protected const string TWO_CRLF = "\r\n\r\n";
+        protected const string CONTENT_LENGTH_HEAD = "Content-Length: ";
         protected static readonly Regex CONTENT_LENGTH_MATCHER = new Regex(@"Content-Length: (\d+)");
 
         protected static readonly Encoding Encoding = System.Text.Encoding.UTF8;
@@ -119,6 +112,20 @@ namespace myserver
             }
         }
 
+        public void SendData(JsonNode data)
+        {
+            if(_outputStream is not null)
+            {
+                var str = data.ToJsonString();
+                var bytes = Encoding.GetBytes(str);
+                var len = bytes.Length.ToString();
+                _outputStream.Write(Encoding.GetBytes(CONTENT_LENGTH_HEAD));
+                _outputStream.Write(Encoding.GetBytes(len));
+                _outputStream.Write(Encoding.GetBytes(TWO_CRLF));
+                _outputStream.Write(bytes);
+            }
+        }
+
         public void Stop()
         {
             _stopRequested = true;
@@ -139,7 +146,7 @@ namespace myserver
                         var content = Encoding.GetString(buf);
                         var json = JsonNode.Parse(content)!;
 
-                        Log(json.ToJsonString());
+                        JsonRpcMgr.Instance.ReceiveData(json);
 
                         continue;   // there may be more complete messages to process
                     }

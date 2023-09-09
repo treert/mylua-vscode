@@ -20,15 +20,15 @@ namespace MyServer.Protocol
             var val = node!.AsValue();
             if (val.TryGetValue<string>(out _string))
             {
-                _long = node.AsValue().GetValue<long>();
+                _number = node.AsValue().GetValue<int>();
             }
         }
 
         public JsonNode? ToJsonNode()
         {
-            if (IsLong)
+            if (IsNumber)
             {
-                return Long;
+                return Number;
             }
             else
             {
@@ -45,11 +45,20 @@ namespace MyServer.Protocol
             {
                 return new MyId(str);
             }
-            else if (node.AsValue().TryGetValue<long>(out var num))
+            else if (node.AsValue().TryGetValue<int>(out var num))
             {
                 return new MyId(num);
             }
             throw new Exception();
+        }
+
+        public static ResponseError ToResponseError(this JsonNode node)
+        {
+            var error = new ResponseError();
+            error.code = node["code"]!.GetValue<int>();
+            error.message = node["message"]!.GetValue<string>();
+            error.data = node["data"];
+            return error;
         }
     }
 }

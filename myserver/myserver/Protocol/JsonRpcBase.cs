@@ -8,14 +8,53 @@ using System.Threading.Tasks;
 
 namespace MyServer.Protocol
 {
-    public abstract class JsonRpcBase
+    public abstract class JsonNotifyBase
     {
-        public MyId m_id;
-        public abstract void OnRequest(JsonNode? args);
-        public abstract void OnResponse(JsonNode? args);
+        public abstract string m_method { get; }
+        public abstract void OnNotify(JsonNode? args);
+        public abstract void SendNotify(JsonNode? args);
     }
 
-    public abstract class JsonRpcBase<TReq, TRes>  : JsonRpcBase  where TReq: IJson,new() where TRes: IJson, new()
+    public abstract class JsonRpcBase
+    {
+        public abstract string m_method { get; }
+        public MyId m_id;
+        public JsonNode? m_args;
+        /// <summary>
+        /// 收到请求，最终需要
+        /// </summary>
+        /// <param name="args"></param>
+        public abstract void OnRequest(JsonNode? args);
+        /// <summary>
+        /// 收到返回
+        /// </summary>
+        /// <param name="args"></param>
+        public abstract void OnResponse(JsonNode? args);
+        /// <summary>
+        /// 收到返回，但是出错了。
+        /// </summary>
+        /// <param name="error"></param>
+        public abstract void OnError(ResponseError error);
+
+        /// <summary>
+        /// 发出请求
+        /// </summary>
+        /// <param name="args"></param>
+        public abstract void SendRequest(JsonNode? args);
+        /// <summary>
+        /// 返回结果
+        /// </summary>
+        /// <param name="args"></param>
+        public abstract void SendResponse(JsonNode? args);
+        /// <summary>
+        /// 返回报错
+        /// </summary>
+        /// <param name="error"></param>
+        public abstract void SendError(ResponseError error);
+    }
+
+    public abstract class JsonRpcBase<TReq, TRes>: JsonRpcBase
+        where TReq: IJson,new() where TRes: IJson, new()
     {
         public TReq? m_req;
         public TRes? m_res;
