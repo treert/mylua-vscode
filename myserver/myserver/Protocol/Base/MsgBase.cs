@@ -51,6 +51,13 @@ namespace MyServer.Protocol
             }
         }
 
+        static int s_num = 0;
+        public static MyId NewId()
+        {
+            int num = Interlocked.Increment(ref s_num);
+            return new MyId(num);
+        }
+
         public static implicit operator MyId(int value) => new MyId(value);
 
         public static implicit operator MyId(string value) => new MyId(value);
@@ -63,11 +70,29 @@ namespace MyServer.Protocol
         public override string ToString() => DebuggerDisplay;
     }
 
-    public class ResponseError
+    public class ResponseError:IJson
     {
         public int code;
         public string message;
         public JsonNode? data;
+
+        public void ReadFrom(JsonNode? node)
+        {
+            code = node!["code"]!.GetValue<int>();
+            message = node!["message"]!.GetValue<string>();
+            data = node!["data"];
+        }
+
+        public JsonNode? ToJsonNode()
+        {
+            JsonObject result = new();
+            result.Add("code", code);
+            result.Add("message", message);
+            if (data != null) {
+                result["data"] = data;
+            }
+            return result;
+        }
     }
 
     public class CancelParams{
@@ -193,8 +218,38 @@ namespace MyServer.Protocol
         }
     }
 
-    //public class  InitRpc:JsonRpcBase<InitArgs, InitResult>
-    //{
-        
-    //}
+    public class InitRpc : JsonRpcBase<InitArgs, InitResult>
+    {
+        public override string m_method => throw new NotImplementedException();
+
+        public override void OnError(ResponseError error)
+        {
+            throw new NotImplementedException();
+        }
+
+        public override void OnRequest()
+        {
+            throw new NotImplementedException();
+        }
+
+        public override void OnResponse()
+        {
+            throw new NotImplementedException();
+        }
+
+        public override void SendError(ResponseError error)
+        {
+            throw new NotImplementedException();
+        }
+
+        public override void SendRequest(JsonNode? args)
+        {
+            throw new NotImplementedException();
+        }
+
+        public override void SendResponse(JsonNode? args)
+        {
+            throw new NotImplementedException();
+        }
+    }
 }

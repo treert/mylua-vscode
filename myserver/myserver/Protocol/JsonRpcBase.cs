@@ -11,46 +11,72 @@ namespace MyServer.Protocol
     public abstract class JsonNotifyBase
     {
         public abstract string m_method { get; }
-        public abstract void OnNotify(JsonNode? args);
-        public abstract void SendNotify(JsonNode? args);
+        public abstract void OnNotifyParseArgs(JsonNode? args);
+        public abstract void OnNotify();
+        public abstract void SendNotify();
     }
 
+    /// <summary>
+    /// RPC 的生命周期。
+    /// Client->Server rpc
+    ///     1. OnRequestParseArgs 解析完参数，排队等待处理。【为了方便实现，现在是一个一个的处理】
+    ///     2. OnRequest 开始处理请求。
+    ///     3. SendRespone 发送返回。
+    /// Server->Client rpc
+    ///     1. SendRequest 发送请求。【不排队，构建rpc结构，直接请求】
+    ///     2. OnResponseParseArgs
+    ///     3. OnResponse
+    ///         - OnSuccess
+    ///         - OnError
+    /// </summary>
     public abstract class JsonRpcBase
     {
         public abstract string m_method { get; }
         public MyId m_id;
         public JsonNode? m_args;
-        /// <summary>
-        /// 收到请求，最终需要
-        /// </summary>
-        /// <param name="args"></param>
-        public abstract void OnRequest(JsonNode? args);
-        /// <summary>
-        /// 收到返回
-        /// </summary>
-        /// <param name="args"></param>
-        public abstract void OnResponse(JsonNode? args);
-        /// <summary>
-        /// 收到返回，但是出错了。
-        /// </summary>
-        /// <param name="error"></param>
-        public abstract void OnError(ResponseError error);
 
+        #region Client RPC
+        /// <summary>
+        /// 收到请求,
+        /// </summary>
+        /// <param name="args"></param>
+        public abstract void OnRequestParseArgs(JsonNode? args);
+        /// <summary>
+        /// 开始处理请求。每个具体rpc自己实现
+        /// </summary>
+        public abstract void OnRequest();
+        /// <summary>
+        /// 返回结果。调用前，先设置好 m_res 或者 m_err
+        /// </summary>
+        /// <param name="args"></param>
+        public abstract void SendResponse();
+        #endregion
+
+        #region Server RPC
         /// <summary>
         /// 发出请求
         /// </summary>
         /// <param name="args"></param>
-        public abstract void SendRequest(JsonNode? args);
+        public abstract void SendRequest();
         /// <summary>
-        /// 返回结果
+        /// 收到返回
         /// </summary>
         /// <param name="args"></param>
-        public abstract void SendResponse(JsonNode? args);
+        public abstract void OnResponseParseArgs(JsonNode? args);
         /// <summary>
-        /// 返回报错
+        /// 请求返回。默认实现分流调用 OnSuccess OnError
         /// </summary>
-        /// <param name="error"></param>
-        public abstract void SendError(ResponseError error);
+        public abstract void OnResponse();
+        /// <summary>
+        /// 请求返回成功。由具体的rpc实现
+        /// </summary>
+        public abstract void OnSuccess();
+        /// <summary>
+        /// 请求返回失败。默认实现在日志里输出点错误信息，具体的rpc也可以 override.
+        /// </summary>
+        public abstract void OnError();
+        #endregion
+
     }
 
     public abstract class JsonRpcBase<TReq, TRes>: JsonRpcBase
@@ -58,29 +84,34 @@ namespace MyServer.Protocol
     {
         public TReq? m_req;
         public TRes? m_res;
-        /// <summary>
-        /// 收到请求。需要提供结果，并看情况响应 cancel
-        /// </summary>
-        public abstract void OnRequest();
+        public ResponseError? m_err;
 
-        /// <summary>
-        /// 请求收到返回。
-        /// </summary>
-        public abstract void OnResponse();
-
-        public override void OnRequest(JsonNode? args)
+        public override sealed void OnRequestParseArgs(JsonNode? args)
         {
             if (args != null)
             {
                 m_req = new TReq();
                 m_req.ReadFrom(args);
             }
-            OnRequest();
         }
 
-        public override void OnResponse(JsonNode? args)
+        public override sealed void SendResponse()
         {
-            throw new NotImplementedException();
+            var data = new JsonObject();
+            data["id"] = m_id.ToJsonNode();
+            if (m_err != null)
+            {
+                data["error"] = m_err.ToJsonNode();
+            }
+            else
+            {
+                data["result"] = m_res?.ToJsonNode();
+            }
+        }
+
+        public override sealed void SendRequest()
+        {
+            
         }
     }
 }

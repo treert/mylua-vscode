@@ -36,7 +36,7 @@ namespace myserver
                     var clientSocket = serverSocket.AcceptSocket();
                     if (clientSocket != null)
                     {
-                        Log(">> accepted connection from client");
+                        My.Logger.Error(">> accepted connection from client");
 
                         new System.Threading.Thread(() => {
                             using (var networkStream = new NetworkStream(clientSocket))
@@ -47,7 +47,7 @@ namespace myserver
                                 }
                                 catch (Exception e)
                                 {
-                                    Console.Error.WriteLine("Exception: " + e);
+                                    My.Logger.Error(e);
                                 }
                             }
                             clientSocket.Close();
@@ -56,21 +56,6 @@ namespace myserver
                     }
                 }
             }).Start();
-        }
-
-        static string LOG_FILE_PATH = "mylua.debug.log";
-        static TextWriter logFile;
-        public static void Log(string msg)
-        {
-            Console.Error.WriteLine(msg);
-            if(LOG_FILE_PATH != null)
-            {
-                if (logFile == null)
-                {
-                    logFile = File.CreateText(LOG_FILE_PATH);
-                }
-                logFile.WriteLine(string.Format("{0} {1}", DateTime.UtcNow.ToLongTimeString(), msg));
-            }
         }
 
         protected const int BUFFER_SIZE = 4096;
