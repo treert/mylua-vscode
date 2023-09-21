@@ -1,4 +1,5 @@
-﻿using System;
+﻿using MyServer.Protocol;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -22,9 +23,13 @@ namespace MyServer
         public bool IsInited => m_status == Status.Inited;
 
 
-        public void Init()
+        public void Init(InitRpc rpc)
         {
-            m_status = Status.Inited;
+            //m_status = Status.Inited;
+            rpc.m_err = new ResponseError();
+            rpc.m_err.code = ErrorCodes.InternalError;
+            rpc.m_err.message = "debug init error";
+            rpc.SendResponse();
         }
 
         public void ShutDown()

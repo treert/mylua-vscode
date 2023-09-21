@@ -14,30 +14,6 @@ using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace MyServer.Protocol
 {
-    public partial record MyId : IJson
-    {
-        public void ReadFrom(JsonNode? node)
-        {
-            var val = node!.AsValue();
-            if (val.TryGetValue<string>(out _string))
-            {
-                _number = node.AsValue().GetValue<int>();
-            }
-        }
-
-        public JsonNode? ToJsonNode()
-        {
-            if (IsNumber)
-            {
-                return Number;
-            }
-            else
-            {
-                return String;
-            }
-        }
-    }
-
     public static class JsonRpcExtensions
     {
         public static MyId ToMyId(this JsonNode node)

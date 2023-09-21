@@ -27,13 +27,13 @@ namespace MyServer.Protocol
                 {
                     if (t.IsSubclassOf(rpc_type))
                     {
-                        var rpc = Activator.CreateInstance(rpc_type) as JsonRpcBase;
+                        var rpc = Activator.CreateInstance(t) as JsonRpcBase;
                         var method = rpc!.m_method;
                         m_rpc_type_map.Add(method, t);
                     }
                     else if (t.IsSubclassOf(ntf_type))
                     {
-                        var ntf = Activator.CreateInstance(ntf_type) as JsonNotifyBase;
+                        var ntf = Activator.CreateInstance(t) as JsonNotifyBase;
                         var method = ntf!.m_method;
                         m_notify_type_map.Add(method, t);
                     }
@@ -55,35 +55,13 @@ namespace MyServer.Protocol
 
             if (id is not null)// rpc
             {
-                if (error is null)
+                if(method is not null)// req
                 {
-                    if(method is null) // res
-                    {
-                        if(m_server_rpc_map.TryGetValue(id,out var rpc))
-                        {
-                            rpc.OnResponse(result);
-                        }
-                        else
-                        {
-                            My.Logger.Error($"client res not valid id. {data}");
-                        }
-                    }
-                    else// req
-                    {
-                        OnGetRequest(id, method, args);
-
-                    }
+                    OnGetRequest(id, method, args);
                 }
-                else// res fail
+                else// res
                 {
-                    if (m_server_rpc_map.TryGetValue(id, out var rpc))
-                    {
-                        rpc.OnError(error);
-                    }
-                    else
-                    {
-                        My.Logger.Error($"client fail res not valid id. {data}");
-                    }
+                    OnGetResponse(id, result, error);
                 }
             }
             else if(method is not null) // notify
@@ -92,7 +70,7 @@ namespace MyServer.Protocol
             }
             else
             {
-                My.Logger.Error($"recv bad format. {data}");
+                My.Logger.Error($"recv bad format msg. {data}");
             }
         }
 
@@ -119,23 +97,19 @@ namespace MyServer.Protocol
         /// <param name="id"></param>
         /// <param name="method"></param>
         /// <param name="args"></param>
-        public void OnGetRequest(MyId id, string method, JsonNode? args)
+        private void OnGetRequest(MyId id, string method, JsonNode? args)
         {
-            if (method == MyConst.Method.Init)
+            if (!MyServerMgr.Instance.IsInited && method != MyConst.Method.Init)
             {
-                InitRpc initRpc = new InitRpc();
-                return;// 初始化协议需要特殊处理
-            }
-            if (!MyServerMgr.Instance.IsInited)
-            {
-                SendErrorForRPC(id, ErrorCodes.ServerNotInitialized, "");
+                SendErrorForRPC(id, ErrorCodes.ServerNotInitialized, "server has not initialized");
                 return;
             }
             if (m_rpc_type_map.TryGetValue(method, out var tt))
             {
                 JsonRpcBase? rpc = Activator.CreateInstance(tt) as JsonRpcBase;
                 Debug.Assert(rpc != null);
-                rpc.m_args = args;
+                rpc.m_id = id;
+                rpc.OnRequestParseArgs(args);
                 m_client_rpc_list.Enqueue(rpc);
                 TryHandleOneRequest();
             }
@@ -145,12 +119,25 @@ namespace MyServer.Protocol
             }
         }
 
+        private void OnGetResponse(MyId id, JsonNode? result, ResponseError? error)
+        {
+            if (m_server_rpc_map.TryGetValue(id, out var rpc))
+            {
+                rpc.OnResponseParseData(result, error);
+                rpc.OnResponse();
+            }
+            else
+            {
+                My.Logger.Error($"client res unexpect. id={id} result={result} error={error}");
+            }
+        }
+
         /// <summary>
         /// 有些情况需要特殊处理
         /// </summary>
         /// <param name="method"></param>
         /// <param name="args"></param>
-        public void OnGetNotify(string method, JsonNode? args)
+        private void OnGetNotify(string method, JsonNode? args)
         {
             if(method == MyConst.Method.Exit)
             {
@@ -165,7 +152,8 @@ namespace MyServer.Protocol
             {
                 JsonNotifyBase? notify = Activator.CreateInstance(tt) as JsonNotifyBase;
                 Debug.Assert(notify != null);
-                notify.OnNotify(args);
+                notify.OnNotifyParseArgs(args);
+                notify.OnNotify();
             }
             else
             {
@@ -180,11 +168,11 @@ namespace MyServer.Protocol
         }
 
         // 现在一次只会处理一个
-        public void TryHandleOneRequest()
+        private void TryHandleOneRequest()
         {
             if (m_client_rpc_doing is null && m_client_rpc_list.TryDequeue(out m_client_rpc_doing))
             {
-                m_client_rpc_doing.OnRequest(m_client_rpc_doing.m_args);
+                m_client_rpc_doing.OnRequest();
             }
         }
 

@@ -10,6 +10,7 @@ using static System.Runtime.InteropServices.JavaScript.JSType;
 using System.Text.Json.Nodes;
 using MyServer.Misc;
 using MyServer.Protocol;
+using MyServer;
 
 namespace myserver
 {
@@ -52,6 +53,7 @@ namespace myserver
                             }
                             clientSocket.Close();
                             My.Logger.Error(">> client connection closed");
+                            MyServerMgr.Instance.ExitApp();
                         }).Start();
                     }
                 }

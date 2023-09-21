@@ -1,4 +1,5 @@
 ﻿using MyServer.JsonRpc;
+using MyServer.Misc;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -10,7 +11,7 @@ using System.Threading.Tasks;
 namespace MyServer.Protocol
 {
     // lsp 里定义的一些 id: integer | string;
-    public partial record MyId : IEquatable<int>, IEquatable<string>
+    public record MyId : IEquatable<int>, IEquatable<string>, IJson
     {
         private int? _number;
         private string? _string;
@@ -68,12 +69,33 @@ namespace MyServer.Protocol
         private string DebuggerDisplay => IsString ? String : IsNumber ? Number.ToString() : "";
 
         public override string ToString() => DebuggerDisplay;
+
+        public void ReadFrom(JsonNode? node)
+        {
+            var val = node!.AsValue();
+            if (val.TryGetValue<string>(out _string))
+            {
+                _number = node.AsValue().GetValue<int>();
+            }
+        }
+
+        public JsonNode? ToJsonNode()
+        {
+            if (IsNumber)
+            {
+                return Number;
+            }
+            else
+            {
+                return String;
+            }
+        }
     }
 
     public class ResponseError:IJson
     {
         public int code;
-        public string message;
+        public string message = string.Empty;
         public JsonNode? data;
 
         public void ReadFrom(JsonNode? node)
@@ -85,9 +107,11 @@ namespace MyServer.Protocol
 
         public JsonNode? ToJsonNode()
         {
-            JsonObject result = new();
-            result.Add("code", code);
-            result.Add("message", message);
+            JsonObject result = new()
+            {
+                { "code", code },
+                { "message", message }
+            };
             if (data != null) {
                 result["data"] = data;
             }
@@ -220,35 +244,16 @@ namespace MyServer.Protocol
 
     public class InitRpc : JsonRpcBase<InitArgs, InitResult>
     {
-        public override string m_method => throw new NotImplementedException();
-
-        public override void OnError(ResponseError error)
-        {
-            throw new NotImplementedException();
-        }
+        public override string m_method => MyConst.Method.Init;
 
         public override void OnRequest()
         {
-            throw new NotImplementedException();
+            MyServerMgr.Instance.Init(this);
         }
 
-        public override void OnResponse()
+        protected override void OnSuccess()
         {
-            throw new NotImplementedException();
-        }
-
-        public override void SendError(ResponseError error)
-        {
-            throw new NotImplementedException();
-        }
-
-        public override void SendRequest(JsonNode? args)
-        {
-            throw new NotImplementedException();
-        }
-
-        public override void SendResponse(JsonNode? args)
-        {
+            // only from client
             throw new NotImplementedException();
         }
     }

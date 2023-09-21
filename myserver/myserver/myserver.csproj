@@ -10,11 +10,13 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <None Include="..\.editorconfig" Link=".editorconfig" />
+    <Compile Remove="Protocol\Client\**" />
+    <EmbeddedResource Remove="Protocol\Client\**" />
+    <None Remove="Protocol\Client\**" />
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Protocol\Client\" />
+    <None Include="..\.editorconfig" Link=".editorconfig" />
   </ItemGroup>
 
   <ItemGroup>
