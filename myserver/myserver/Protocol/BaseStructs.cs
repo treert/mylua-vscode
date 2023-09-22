@@ -9,6 +9,11 @@ public record MyId : IEquatable<int>, IEquatable<string>, IJson
     private int? _number;
     private string? _string;
 
+    public MyId()
+    {
+        _string = string.Empty;
+    }
+
     public MyId(int value)
     {
         _number = value;

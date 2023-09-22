@@ -11,9 +11,11 @@ RPC 的生命周期。
 Client->Server rpc
     1. OnRequestParseArgs 解析完参数，排队等待处理。【为了方便实现，现在是一个一个的处理】
     2. OnRequest 开始处理请求。
+        - OnCanceled 取消请求。当已经开始请求时需要处理下
     3. SendRespone 发送返回。
 Server->Client rpc
     1. SendRequest 发送请求。【不排队，构建rpc结构，直接请求】
+        - SendCancel
     2. OnResponseParseArgs
     3. OnResponse
         - OnSuccess
@@ -25,12 +27,17 @@ namespace MyServer.Protocol
     public abstract class JsonNotifyBase
     {
         public abstract string m_method { get; }
-        public abstract void OnNotifyParseArgs(JsonNode? args);
+        public virtual void OnNotifyParseArgs(JsonNode? args) { }
         /// <summary>
         /// 子类需要实现
         /// </summary>
         public abstract void OnNotify();
-        public abstract void SendNotify();
+        public virtual void SendNotify()
+        {
+            JsonObject data = new();
+            data["method"] = m_method;
+            JsonRpcMgr.Instance.SendData(data);
+        }
     }
 
     public abstract class JsonNotifyBase<TArgs>: JsonNotifyBase where TArgs:IJson,new()
@@ -58,11 +65,26 @@ namespace MyServer.Protocol
         }
     }
 
-
     public abstract class JsonRpcBase
     {
+        public enum Status
+        {
+            Init,
+            SendRequest,
+            SendCancel,// 只有 SendRequest 会转移到这个状态
+            OnRequestParseArgs,
+            OnRequest,
+            OnCanceled,// 只有 OnRequest 转移到这个状态。这时rpc需要及时结束
+            SendResponse,
+            OnResponseParseArgs,
+            OnResponse,
+            OnSuccess,
+            OnError,
+        }
+
         public abstract string m_method { get; }
         public MyId m_id;
+        public Status m_status = Status.Init;
 
         #region Client RPC
         /// <summary>
@@ -74,6 +96,9 @@ namespace MyServer.Protocol
         /// 开始处理请求。每个具体rpc自己实现
         /// </summary>
         public abstract void OnRequest();
+
+        public abstract void OnCanceled();
+
         /// <summary>
         /// 返回结果。调用前，先设置好 m_res 或者 m_err
         /// </summary>
@@ -85,8 +110,12 @@ namespace MyServer.Protocol
         /// <summary>
         /// 发出请求，应该准备好m_req。会新生成id。应该只调用一次。
         /// </summary>
-        /// <param name="args"></param>
         public abstract void SendRequest();
+
+        /// <summary>
+        /// 发送取消指令
+        /// </summary>
+        public abstract void SendCancel();
         /// <summary>
         /// 收到返回
         /// </summary>
@@ -117,6 +146,7 @@ namespace MyServer.Protocol
 
         public override sealed void OnRequestParseArgs(JsonNode? args)
         {
+            m_status = Status.OnRequestParseArgs;
             if (args != null)
             {
                 m_req = new TReq();
@@ -126,6 +156,7 @@ namespace MyServer.Protocol
 
         public override sealed void SendResponse()
         {
+            m_status = Status.SendResponse;
             var data = new JsonObject();
             data["id"] = m_id.ToJsonNode();
             if (m_err != null)
@@ -141,6 +172,7 @@ namespace MyServer.Protocol
 
         public override sealed void SendRequest()
         {
+            m_status = Status.SendRequest;
             var data = new JsonObject();
             m_id = MyId.NewId();
             data["id"] = m_id.ToJsonNode();
@@ -150,6 +182,11 @@ namespace MyServer.Protocol
                 data["params"] = m_res.ToJsonNode();
             }
             JsonRpcMgr.Instance.SendRequest(this, data);
+        }
+
+        public override sealed void SendCancel()
+        {
+            throw new NotImplementedException();
         }
 
         public override sealed void OnResponseParseData(JsonNode? result, ResponseError? error)
