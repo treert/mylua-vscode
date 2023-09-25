@@ -69,9 +69,13 @@ namespace MyServer.Protocol
             MyServerMgr.Instance.Init(this);
         }
 
+        public override void OnCanceled()
+        {
+            throw new NotImplementedException();
+        }
+
         protected override void OnSuccess()
         {
-            // only from client
             throw new NotImplementedException();
         }
     }

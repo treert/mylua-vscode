@@ -12,7 +12,7 @@ namespace MyServer.Protocol
 
         public override void OnNotify()
         {
-            throw new NotImplementedException();
+            JsonRpcMgr.Instance.CancelRequest(m_args!);
         }
     }
 

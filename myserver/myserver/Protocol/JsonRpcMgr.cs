@@ -185,6 +185,30 @@ namespace MyServer.Protocol
             TryHandleOneRequest();
         }
 
+        public void CancelRequest(MyId id)
+        {
+            if(m_client_rpc_doing is not null && m_client_rpc_doing.m_id == id)
+            {
+                m_client_rpc_doing.OnCanceled();
+            }
+            else
+            {
+                var arr = m_client_rpc_list.ToArray();
+                m_client_rpc_list.Clear();
+                foreach (var item in arr)
+                {
+                    if(item.m_id != id)
+                    {
+                        m_client_rpc_list.Enqueue(item);
+                    }
+                    else
+                    {
+                        // 直接丢弃，反正还没开始工作。
+                    }
+                }
+            }
+        }
+
         /// <summary>
         /// client request list. wait for server res.
         /// </summary>
