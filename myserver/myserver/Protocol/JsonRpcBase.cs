@@ -20,6 +20,16 @@ Server->Client rpc
     3. OnResponse
         - OnSuccess
         - OnError
+
+lsp一般只要使用一半的生命周期。
+具体到单个rpc，OnRequest/OnCanceled/OnSuccess 如果不会用到，抛异常就行，算是Assert吧。
+OnError 默认只是输出下日志，按需要 override 。
+
+Notify 生命周期
+    1. SendNotify
+    2. OnNotifyParseArgs
+    3. OnNotify
+
 */
 
 namespace MyServer.Protocol
@@ -32,6 +42,9 @@ namespace MyServer.Protocol
         /// 子类需要实现
         /// </summary>
         public abstract void OnNotify();
+        /// <summary>
+        /// 发送请求。如果有参数，设置好参数后，再调用。
+        /// </summary>
         public virtual void SendNotify()
         {
             JsonObject data = new();

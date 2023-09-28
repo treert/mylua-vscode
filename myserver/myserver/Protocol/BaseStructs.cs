@@ -105,6 +105,11 @@ public record ProgressToken : MyId
     }
 }
 
+public class IWorkDoneProgressParams
+{
+
+}
+
 public class ResponseError : IJson
 {
     public int code;

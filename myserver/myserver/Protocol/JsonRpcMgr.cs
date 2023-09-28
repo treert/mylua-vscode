@@ -11,7 +11,7 @@ using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace MyServer.Protocol
 {
-    internal class JsonRpcMgr
+    public partial class JsonRpcMgr
     {
         public static JsonRpcMgr Instance = new JsonRpcMgr();
 
