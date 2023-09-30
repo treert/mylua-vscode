@@ -55,13 +55,12 @@ namespace MyServer.Protocol
 
     public abstract class JsonNotifyBase<TArgs>: JsonNotifyBase where TArgs:IJson,new()
     {
-        public TArgs? m_args;
+        public TArgs m_args = new TArgs();
 
         public override sealed void OnNotifyParseArgs(JsonNode? args)
         {
-            if(args is not null)
+            if (args is not null)
             {
-                m_args = new TArgs();
                 m_args.ReadFrom(args);
             }
         }
@@ -164,11 +163,18 @@ namespace MyServer.Protocol
             {
                 m_req = new TReq();
                 m_req.ReadFrom(args);
+                PostOnRequestParseArgs(args);
             }
+        }
+
+        public virtual void PostOnRequestParseArgs(JsonNode args)
+        {
+
         }
 
         public override sealed void SendResponse()
         {
+            My.Logger.Debug($"SendResponse id={m_id} {m_method}");
             m_status = Status.SendResponse;
             var data = new JsonObject();
             data["id"] = m_id.ToJsonNode();
@@ -185,6 +191,7 @@ namespace MyServer.Protocol
 
         public override sealed void SendRequest()
         {
+            My.Logger.Debug($"SendRequest id={m_id} {m_method}");
             m_status = Status.SendRequest;
             var data = new JsonObject();
             m_id = MyId.NewId();
@@ -199,7 +206,10 @@ namespace MyServer.Protocol
 
         public override sealed void SendCancel()
         {
-            throw new NotImplementedException();
+            My.Logger.Debug($"SendCancel id={m_id} {m_method}");
+            NtfCancelRequest ntf = new NtfCancelRequest();
+            ntf.m_args.id = m_id;
+            ntf.SendNotify();
         }
 
         public override sealed void OnResponseParseData(JsonNode? result, ResponseError? error)
@@ -217,6 +227,7 @@ namespace MyServer.Protocol
 
         public override sealed void OnResponse()
         {
+            My.Logger.Debug($"OnResponse id={m_id} {m_method}");
             if (m_err != null)
             {
                 OnError();

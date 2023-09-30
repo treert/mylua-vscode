@@ -1,9 +1,10 @@
-namespace MyServer.Protocol;
-
+global using ProgressToken = MyServer.Protocol.MyId;
 // lsp 里定义的一些 id: integer | string;
 using MyServer.JsonRpc;
 using System.Text.Json.Nodes;
 
+
+namespace MyServer.Protocol;
 public record MyId : IEquatable<int>, IEquatable<string>, IJson
 {
     private int? _number;
@@ -61,6 +62,28 @@ public record MyId : IEquatable<int>, IEquatable<string>, IJson
 
     public static implicit operator MyId(string value) => new MyId(value);
 
+    public static implicit operator MyId?(JsonNode? node)
+    {
+        if (node == null)
+        {
+            return null;
+        }
+        if (node.AsValue().TryGetValue<string>(out var str))
+        {
+            return new MyId(str);
+        }
+        else if (node.AsValue().TryGetValue<int>(out var num))
+        {
+            return new MyId(num);
+        }
+        throw new Exception();
+    }
+
+    public static implicit operator JsonNode(MyId id)
+    {
+        return id.ToJsonNode();
+    }
+
     public bool Equals(int other) => IsNumber && _number == other;
     public bool Equals(string? other) => IsString && _string == other;
 
@@ -68,7 +91,7 @@ public record MyId : IEquatable<int>, IEquatable<string>, IJson
 
     public override string ToString() => DebuggerDisplay;
 
-    public void ReadFrom(JsonNode? node)
+    public void ReadFrom(JsonNode node)
     {
         var val = node!.AsValue();
         if (val.TryGetValue<string>(out _string))
@@ -77,7 +100,7 @@ public record MyId : IEquatable<int>, IEquatable<string>, IJson
         }
     }
 
-    public JsonNode? ToJsonNode()
+    public JsonNode ToJsonNode()
     {
         if (IsNumber)
         {
@@ -85,29 +108,33 @@ public record MyId : IEquatable<int>, IEquatable<string>, IJson
         }
         else
         {
-            return String;
+            return String!;
         }
     }
 }
 
-public record ProgressToken : MyId
+
+
+public interface IWorkDoneProgressParams : IJson
 {
-    public ProgressToken(int value) : base(value)
-    {
-    }
-
-    public ProgressToken(string value) : base(value)
-    {
-    }
-
-    protected ProgressToken(MyId original) : base(original)
-    {
-    }
+    ProgressToken? workDoneToken { get => null; }
 }
 
-public class IWorkDoneProgressParams
+public class WorkDoneProgressParams
 {
+    ProgressToken? workDoneToken = null;
+    public void ReadFrom(JsonNode node)
+    {
+        workDoneToken = node["workDoneToken"];
+    }
 
+    public void WriteTo(JsonNode node)
+    {
+        if(workDoneToken != null)
+        {
+            node["workDoneToken"] = workDoneToken.ToJsonNode();
+        }
+    }
 }
 
 public class ResponseError : IJson
@@ -116,14 +143,14 @@ public class ResponseError : IJson
     public string message = string.Empty;
     public JsonNode? data;
 
-    public void ReadFrom(JsonNode? node)
+    public void ReadFrom(JsonNode node)
     {
         code = node!["code"]!.GetValue<int>();
         message = node!["message"]!.GetValue<string>();
         data = node!["data"];
     }
 
-    public JsonNode? ToJsonNode()
+    public JsonNode ToJsonNode()
     {
         JsonObject result = new()
             {

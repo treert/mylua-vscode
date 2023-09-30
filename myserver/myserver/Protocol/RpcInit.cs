@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Runtime.Intrinsics.X86;
 using System.Text;
 using System.Text.Json.Nodes;
 using System.Threading.Tasks;
@@ -12,34 +13,88 @@ namespace MyServer.Protocol
 {
 
 
-    public class WorkspaceFolder
+    public class WorkspaceFolder : IJson
     {
         public Uri uri;
         public string name;
+
+        public void ReadFrom(JsonNode node)
+        {
+            var str = node["uri"]!.GetValue<string>();
+            uri = new Uri(str);
+            name = node["name"]!.GetValue<string>();
+        }
+
+        public JsonNode ToJsonNode()
+        {
+            JsonObject data = new JsonObject();
+            data.Add("name", name);
+            data.Add("uri", uri.ToString());
+            return data;
+        }
     }
 
     public class InitArgs : IJson
     {
+        public WorkDoneProgressParams progress;
+
+        /// <summary>
+        /// 客户端进程，如果有值，需要检查下：如果客户端进程已经跪了，需要退出lsp
+        /// </summary>
         public int? processId;
+        /// <summary>
+        /// 客户端名字和版本。myserver do not care
+        /// </summary>
         public (string name,string? version)? clientInfo;
+        /// <summary>
+        /// Uses IETF language tags as the value's syntax
+        /// (See https://en.wikipedia.org/wiki/IETF_language_tag)
+        /// myserver do not care
+        /// </summary>
         public string? locale;
+        /// <summary>
+        /// 客户端自定义传过来的参数。开关功能用。
+        /// </summary>
         public JsonNode? initializationOptions;
 
-        public void ReadFrom(JsonNode? node)
+        public LspTrace trace = LspTrace.Off;
+
+        public List<WorkspaceFolder> work_dirs = new List<WorkspaceFolder>();
+
+        public void ReadFrom(JsonNode node)
         {
-            Debug.Assert(node != null);
+            progress.ReadFrom(node);
             processId = node["processId"]?.GetValue<int>();
             var clientInfo_node = node["clientInfo"];
             if (clientInfo_node != null)
             {
-                var name = clientInfo_node["name"]!.GetValue<string>();
-                var version = clientInfo_node["version"]?.GetValue<string>();
+                string name = clientInfo_node["name"]!.GetValue<string>();
+                string? version = clientInfo_node["version"]?.GetValue<string>();
                 clientInfo = (name,version);
             }
             locale = node["locale"]?.GetValue<string>();
+            initializationOptions = node["initializationOptions"];
+            var node_trace = node["trace"]?.GetValue<string>();
+            if (node_trace!= null)
+            {
+                trace = node_trace.StrToTrace();
+            }
+            JsonArray? node_dirs = node["workspaceFolders"]?.AsArray();
+            work_dirs.Clear();
+            if (node_dirs != null)
+            {
+                foreach(var node_dir in node_dirs)
+                {
+                    var dir = new WorkspaceFolder();
+                    dir.ReadFrom(node_dir!);
+                    work_dirs.Add(dir);
+                }
+            }
+
+            // todo 能力字段后面回头搞下。
         }
 
-        public JsonNode? ToJsonNode()
+        public JsonNode ToJsonNode()
         {
             throw new NotImplementedException();
         }
@@ -49,12 +104,12 @@ namespace MyServer.Protocol
     {
         public (string name, string? version)? serverInfo;
 
-        public void ReadFrom(JsonNode? node)
+        public void ReadFrom(JsonNode node)
         {
             throw new NotImplementedException();
         }
 
-        public JsonNode? ToJsonNode()
+        public JsonNode ToJsonNode()
         {
             throw new NotImplementedException();
         }

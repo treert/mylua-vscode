@@ -9,5 +9,6 @@ namespace MyServer.Misc
     public class My
     {
         public static NLog.Logger Logger = NLog.LogManager.GetCurrentClassLogger();
+        public static NLog.Logger NetLogger = NLog.LogManager.GetLogger("MyLog.Net");
     }
 }

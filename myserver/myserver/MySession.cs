@@ -104,6 +104,7 @@ namespace myserver
             if(_outputStream is not null)
             {
                 var str = data.ToJsonString();
+                My.NetLogger.Info($"Send: {str}");
                 var bytes = Encoding.GetBytes(str);
                 var len = bytes.Length.ToString();
                 _outputStream.Write(Encoding.GetBytes(CONTENT_LENGTH_HEAD));
@@ -132,6 +133,7 @@ namespace myserver
 
                         var content = Encoding.GetString(buf);
                         var json = JsonNode.Parse(content)!;
+                        My.NetLogger.Info($"Recv: {content}");
 
                         JsonRpcMgr.Instance.ReceiveData(json);
 

@@ -7,6 +7,7 @@ using System.Linq;
 using System.Text;
 using System.Text.Json.Nodes;
 using System.Threading.Tasks;
+using static MyServer.Misc.MyConst;
 using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace MyServer.Protocol
@@ -47,7 +48,7 @@ namespace MyServer.Protocol
         /// <param name="data"></param>
         public void ReceiveData(JsonNode data)
         {
-            MyId? id = data["id"]?.ToMyId();
+            MyId? id = data["id"];
             string? method = data["method"]?.GetValue<string>();
             JsonNode? args = data["params"];
             JsonNode? result = data["result"];
@@ -172,6 +173,7 @@ namespace MyServer.Protocol
         {
             if (m_client_rpc_doing is null && m_client_rpc_list.TryDequeue(out m_client_rpc_doing))
             {
+                My.Logger.Debug($"OnRequest id={m_client_rpc_doing.m_id} {m_client_rpc_doing.m_method}");
                 m_client_rpc_doing.OnRequest();
             }
         }

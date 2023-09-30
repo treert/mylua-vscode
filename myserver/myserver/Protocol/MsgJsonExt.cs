@@ -16,18 +16,6 @@ namespace MyServer.Protocol
 {
     public static class JsonRpcExtensions
     {
-        public static MyId ToMyId(this JsonNode node)
-        {
-            if (node.AsValue().TryGetValue<string>(out var str))
-            {
-                return new MyId(str);
-            }
-            else if (node.AsValue().TryGetValue<int>(out var num))
-            {
-                return new MyId(num);
-            }
-            throw new Exception();
-        }
 
         public static ResponseError ToResponseError(this JsonNode node)
         {

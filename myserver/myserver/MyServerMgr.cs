@@ -32,6 +32,8 @@ namespace MyServer
             rpc.SendResponse();
         }
 
+        public LspTrace LspTrace { get; set; } = LspTrace.Off;
+
         public void ShutDown()
         {
             m_status = Status.ShutDowned;

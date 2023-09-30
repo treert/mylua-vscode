@@ -13,7 +13,7 @@ namespace MyServer.JsonRpc
 
     public interface IJson
     {
-        void ReadFrom(JsonNode? node);
-        JsonNode? ToJsonNode();
+        void ReadFrom(JsonNode node);
+        JsonNode ToJsonNode();
     }
 }
