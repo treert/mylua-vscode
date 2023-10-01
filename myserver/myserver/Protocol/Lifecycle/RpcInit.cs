@@ -36,7 +36,7 @@ namespace MyServer.Protocol
 
     public class InitArgs : IJson
     {
-        public WorkDoneProgressParams progress;
+        public WorkDoneProgressParams progress = new();
 
         /// <summary>
         /// 客户端进程，如果有值，需要检查下：如果客户端进程已经跪了，需要退出lsp
@@ -111,7 +111,19 @@ namespace MyServer.Protocol
 
         public JsonNode ToJsonNode()
         {
-            throw new NotImplementedException();
+            JsonObject data = new JsonObject();
+            if (serverInfo != null)
+            {
+                JsonObject tt = new JsonObject();
+                tt.Add("name", serverInfo.Value.name);
+                if (serverInfo.Value.version != null)
+                {
+                    tt.Add("version", serverInfo.Value.version);
+                }
+                data.Add("serverInfo", tt);
+            }
+            // todo server 能力
+            return data;
         }
     }
 
@@ -121,7 +133,7 @@ namespace MyServer.Protocol
 
         public override void OnRequest()
         {
-            MyServerMgr.Instance.Init(this);
+            MyServerMgr.Instance.StartInit(this);
         }
 
         public override void OnCanceled()
@@ -132,6 +144,19 @@ namespace MyServer.Protocol
         protected override void OnSuccess()
         {
             throw new NotImplementedException();
+        }
+    }
+
+    /// <summary>
+    /// 客户端受到 rpc init 的结果后发这个 ntf, 通知服务器初始化完成
+    /// </summary>
+    public class NtfInited : JsonNtfBase<EmptyObject>
+    {
+        public override string m_method => "$initialized";
+
+        public override void OnNotify()
+        {
+            MyServerMgr.Instance.NtfInited();
         }
     }
 }

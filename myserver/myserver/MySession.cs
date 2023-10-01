@@ -32,14 +32,21 @@ namespace myserver
             serverSocket.Start();
 
             new System.Threading.Thread(() => {
+                Thread? work_thread = null;
                 while (true)
                 {
                     var clientSocket = serverSocket.AcceptSocket();
                     if (clientSocket != null)
                     {
-                        My.Logger.Error(">> accepted connection from client");
+                        if (work_thread != null)
+                        {
+                            My.Logger.Info(">> wait for pre work to exit");
+                            MySession.Instance.Stop();
+                            work_thread.Join();
+                        }
+                        My.Logger.Info(">> accepted connection from client");
 
-                        new System.Threading.Thread(() => {
+                        work_thread = new System.Threading.Thread(() => {
                             using (var networkStream = new NetworkStream(clientSocket))
                             {
                                 try
@@ -52,9 +59,10 @@ namespace myserver
                                 }
                             }
                             clientSocket.Close();
-                            My.Logger.Error(">> client connection closed");
+                            My.Logger.Info(">> client connection closed");
                             MyServerMgr.Instance.ExitApp();
-                        }).Start();
+                        });
+                        work_thread.Start();
                     }
                 }
             }).Start();

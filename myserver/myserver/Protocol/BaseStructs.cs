@@ -1,6 +1,8 @@
 global using ProgressToken = MyServer.Protocol.MyId;
 // lsp 里定义的一些 id: integer | string;
 using MyServer.JsonRpc;
+using System;
+using System.Buffers.Text;
 using System.Text.Json.Nodes;
 
 
@@ -163,4 +165,53 @@ public class ResponseError : IJson
         }
         return result;
     }
+}
+
+public class TextDocItem
+{
+    public Uri uri { get; set; }
+    public string languageId { get; set; }
+    /// <summary>
+    /// it will increase after each change, including undo/redo
+    /// </summary>
+    public int version { get; set; }
+    public string text { get; set; }
+}
+
+public class TextDocId
+{
+    public Uri uri { get; set; }
+}
+
+public class VersionedTextDocId : TextDocId
+{
+    public int version { get; set; }
+}
+
+public class OptionalVersionedTextDocId : TextDocId
+{
+    public int? version { get; set; }
+}
+
+public class Postion
+{
+    /// <summary>
+    /// Line position in a document (zero-based).
+    /// </summary>
+    public uint line {get;set; }
+
+    /// <summary>
+    /// Character offset on a line in a document(zero-based). The meaning of this
+    /// offset is determined by the negotiated `PositionEncodingKind`.
+    /// 
+    /// If the character value is greater than the line length it defaults back
+    /// to the line length.
+    /// </summary>
+    public uint character { get;set;}
+}
+
+public class Range
+{
+    public Postion start { get; set; }
+    public Postion end { get; set; }
 }

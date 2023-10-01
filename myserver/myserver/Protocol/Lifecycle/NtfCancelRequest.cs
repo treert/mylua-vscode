@@ -23,7 +23,7 @@ namespace MyServer.Protocol
             return data;
         }
     }
-    public class NtfCancelRequest : JsonNotifyBase<CancelParams>
+    public class NtfCancelRequest : JsonNtfBase<CancelParams>
     {
         public override string m_method => "$/cancelRequest";
 

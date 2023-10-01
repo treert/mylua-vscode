@@ -34,7 +34,7 @@ Notify 生命周期
 
 namespace MyServer.Protocol
 {
-    public abstract class JsonNotifyBase
+    public abstract class JsonNtfBase
     {
         public abstract string m_method { get; }
         public virtual void OnNotifyParseArgs(JsonNode? args) { }
@@ -53,7 +53,7 @@ namespace MyServer.Protocol
         }
     }
 
-    public abstract class JsonNotifyBase<TArgs>: JsonNotifyBase where TArgs:IJson,new()
+    public abstract class JsonNtfBase<TArgs>: JsonNtfBase where TArgs:IJson,new()
     {
         public TArgs m_args = new TArgs();
 

@@ -1,8 +1,10 @@
-﻿using MyServer.Protocol;
+﻿using myserver;
+using MyServer.Protocol;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Text.Json.Nodes;
 using System.Threading.Tasks;
 
 namespace MyServer
@@ -23,32 +25,46 @@ namespace MyServer
         public bool IsInited => m_status == Status.Inited;
 
 
-        public void Init(InitRpc rpc)
+        public void StartInit(InitRpc rpc)
         {
-            //m_status = Status.Inited;
             rpc.m_err = new ResponseError();
             rpc.m_err.code = ErrorCodes.InternalError;
+            var err_data = new JsonObject()
+            {
+                { "retry",true },
+            };
+            rpc.m_err.data = err_data;
             rpc.m_err.message = "debug init error";
             rpc.SendResponse();
         }
 
+        public void NtfInited()
+        {
+            m_status = Status.Inited;
+        }
+
         public LspTrace LspTrace { get; set; } = LspTrace.Off;
 
-        public void ShutDown()
+        public void ShutDown(RpcShutdown rpc)
         {
             m_status = Status.ShutDowned;
+            rpc.SendResponse();
         }
 
         public void ExitApp()
         {
-            if(m_status == Status.ShutDowned)
-            {
-                Environment.Exit(0);
-            }
-            else
-            {
-                Environment.Exit(1);
-            }
+            MySession.Instance.Stop();
+            m_status = Status.UnInit;
+            JsonRpcMgr.Instance.Init();
+            return;
+            //if(m_status == Status.ShutDowned)
+            //{
+            //    Environment.Exit(0);
+            //}
+            //else
+            //{
+            //    Environment.Exit(1);
+            //}
         }
     }
 }

@@ -66,7 +66,10 @@ namespace MyServer.Protocol
         }
     }
 
-    public class NtfLogTrace : JsonNotifyBase<LogTraceParams>
+    /// <summary>
+    /// 服务器发送日志给客户端
+    /// </summary>
+    public class NtfLogTrace : JsonNtfBase<LogTraceParams>
     {
         public override string m_method => "$/logTrace";
 
@@ -91,7 +94,7 @@ namespace MyServer.Protocol
         }
     }
 
-    public class NtfSetTrace : JsonNotifyBase<SetTraceParams>
+    public class NtfSetTrace : JsonNtfBase<SetTraceParams>
     {
         public override string m_method => "$/setTrace";
 

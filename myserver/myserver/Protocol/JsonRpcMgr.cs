@@ -18,10 +18,17 @@ namespace MyServer.Protocol
 
         public void Init()
         {
+            // clear cache
+            m_client_rpc_doing = null;
+            m_client_rpc_list.Clear();
+            m_server_rpc_map.Clear();
+            m_notify_type_map.Clear();
+            m_rpc_type_map.Clear();
+
             var assembly = typeof(JsonRpcMgr).Assembly;
             var types = assembly.GetTypes();
             var rpc_type = typeof(JsonRpcBase);
-            var ntf_type = typeof(JsonNotifyBase);
+            var ntf_type = typeof(JsonNtfBase);
             foreach (var t in types)
             {
                 if (!t.IsAbstract && !t.IsGenericType)
@@ -34,7 +41,7 @@ namespace MyServer.Protocol
                     }
                     else if (t.IsSubclassOf(ntf_type))
                     {
-                        var ntf = Activator.CreateInstance(t) as JsonNotifyBase;
+                        var ntf = Activator.CreateInstance(t) as JsonNtfBase;
                         var method = ntf!.m_method;
                         m_notify_type_map.Add(method, t);
                     }
@@ -151,7 +158,7 @@ namespace MyServer.Protocol
             }
             if (m_notify_type_map.TryGetValue(method, out var tt))
             {
-                JsonNotifyBase? notify = Activator.CreateInstance(tt) as JsonNotifyBase;
+                JsonNtfBase? notify = Activator.CreateInstance(tt) as JsonNtfBase;
                 Debug.Assert(notify != null);
                 notify.OnNotifyParseArgs(args);
                 notify.OnNotify();
