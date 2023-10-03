@@ -1,9 +1,11 @@
 ﻿using MyServer.JsonRpc;
+using MyServer.Misc;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Text.Json.Nodes;
+using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 
 /*
@@ -16,27 +18,12 @@ using System.Threading.Tasks;
 
 namespace MyServer.Protocol;
 
-public class Registration : IJson
+public class Registration
 {
-    public string id;
-    public string method;
-    public JsonNode? registerOptions;
-
-    public void ReadFrom(JsonNode node)
-    {
-        throw new NotImplementedException();
-    }
-
-    public JsonNode ToJsonNode()
-    {
-        JsonObject obj = new JsonObject()
-        {
-            { "id", id },
-            { "method", method },
-            { "registerOptions", registerOptions }
-        };
-        return obj;
-    }
+    public string id { get; set; }
+    public string method { get; set; }
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public JsonNode? registerOptions { get; set; }
 }
 
 public class RegistrationParams : IJson
@@ -50,12 +37,7 @@ public class RegistrationParams : IJson
     public JsonNode ToJsonNode()
     {
         JsonObject obj = new JsonObject();
-        JsonArray arr = new JsonArray();
-        foreach (Registration registration in regs)
-        {
-            arr.Add(registration.ToJsonNode());
-        }
-        obj["registrations"] = arr;
+        obj["registrations"] = regs.ToJsonNode();
         return obj;
     }
 }
@@ -80,26 +62,10 @@ public class RpcRegisterCapability : JsonRpcBase<RegistrationParams, EmptyObject
     }
 }
 
-public class UnRegistration : IJson
+public class UnRegistration
 {
-    public string id;
-    public string method;
-
-    public void ReadFrom(JsonNode node)
-    {
-        id = node["id"]!.GetValue<string>();
-        method = node["method"]!.GetValue<string>();
-    }
-
-    public JsonNode ToJsonNode()
-    {
-        JsonObject obj = new JsonObject()
-        {
-            { "id", id },
-            { "method", method },
-        };
-        return obj;
-    }
+    public string id { get; set; }
+    public string method { get; set; }
 }
 
 public class UnRegistrationParams : IJson
@@ -107,25 +73,13 @@ public class UnRegistrationParams : IJson
     public List<UnRegistration> regs = new();
     public void ReadFrom(JsonNode node)
     {
-        regs.Clear();
-        JsonArray arr = node["unregisterations"]!.AsArray();
-        foreach (JsonNode? it in arr)
-        {
-            var reg = new UnRegistration();
-            reg.ReadFrom(it!);
-            regs.Add(reg);
-        }
+        regs = node["unregisterations"]!.ConvertTo<List<UnRegistration>>();
     }
 
     public JsonNode ToJsonNode()
     {
         JsonObject obj = new JsonObject();
-        JsonArray arr = new JsonArray();
-        foreach (UnRegistration registration in regs)
-        {
-            arr.Add(registration.ToJsonNode());
-        }
-        obj["unregisterations"] = arr;
+        obj["unregisterations"] = regs.ToJsonNode();
         return obj;
     }
 }

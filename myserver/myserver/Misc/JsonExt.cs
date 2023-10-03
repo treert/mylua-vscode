@@ -10,6 +10,36 @@ using System.Text.Json.Nodes;
 
 namespace MyServer.Misc
 {
+    public static class MyJsonExt
+    {
+        private static JsonSerializerOptions s_json_options = new JsonSerializerOptions()
+        {
+            WriteIndented = false,
+        };
+
+        public static string ToJsonStr(this JsonNode node)
+        {
+            return node.ToJsonString(s_json_options);
+        }
+
+        public static T ConvertTo<T>(this JsonNode node)
+        {
+            T t = JsonSerializer.Deserialize<T>(node, s_json_options)!;
+            return t;
+        }
+
+        public static JsonNode ToJsonNode(this object value)
+        {
+            var node = JsonSerializer.SerializeToNode(value, value.GetType(), s_json_options);
+            return node!;
+        }
+
+        public static void AddKeyValue(this JsonObject json, string key, object? value)
+        {
+            json.Add(key, value?.ToJsonNode());
+        }
+    }
+
     [JsonConverter(typeof(MyNodeJsonConverter))]
     public class MyNode
     {

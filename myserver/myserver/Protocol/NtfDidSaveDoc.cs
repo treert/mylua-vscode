@@ -4,29 +4,31 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Threading.Tasks;
 
 namespace MyServer.Protocol;
 
-public class DidOpenDocParams : IJson
+public class DidSaveTextDocumentParams : IJson
 {
-    public TextDocItem textDoc;
+    public TextDocId doc_id;
+    public string? text;
+
     public void ReadFrom(JsonNode node)
     {
-        textDoc = node.ConvertTo<TextDocItem>()!;
+        doc_id = node["textDocument"]!.ConvertTo<TextDocId>();
+        text = (string?)node["text"];
     }
 
     public JsonNode ToJsonNode()
     {
-        return textDoc.ToJsonNode()!;
+        throw new NotImplementedException();
     }
 }
 
-public class NtfDidOpenDoc : JsonNtfBase<DidOpenDocParams>
+public class NtfDidSaveDoc : JsonNtfBase<DidSaveTextDocumentParams>
 {
-    public override string m_method => "textDocument/didOpen";
+    public override string m_method => "textDocument/didSave";
 
     public override void OnNotify()
     {

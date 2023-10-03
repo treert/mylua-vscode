@@ -1,4 +1,5 @@
 ﻿using MyServer.JsonRpc;
+using MyServer.Misc;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -26,15 +27,10 @@ public class DidChangeDocParams : IJson
     public void ReadFrom(JsonNode node)
     {
         JsonNode node_doc_id = node["textDocument"]!;
-        doc_vid = JsonSerializer.Deserialize<VersionedTextDocId>(node_doc_id)!;
-        JsonArray arr = node["contentChanges"]!.AsArray();
+        doc_vid = node_doc_id.ConvertTo<VersionedTextDocId>()!;
 
-        changes = new List<TextDocContentChangeEvent>();
-        foreach (JsonNode? item in arr)
-        {
-            var change = JsonSerializer.Deserialize<TextDocContentChangeEvent>(item)!;
-            changes.Add(change);
-        }
+        JsonArray arr = node["contentChanges"]!.AsArray();
+        changes = arr!.ConvertTo<List<TextDocContentChangeEvent>>();
     }
 
     public JsonNode ToJsonNode()

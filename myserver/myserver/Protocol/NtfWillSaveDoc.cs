@@ -7,6 +7,7 @@ using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 using System.Text.Json;
 using System.Threading.Tasks;
+using MyServer.Misc;
 
 namespace MyServer.Protocol;
 
@@ -35,7 +36,7 @@ public class WillSaveTextDocParams : IJson
     public void ReadFrom(JsonNode node)
     {
         JsonNode node_doc_id = node["textDocument"]!;
-        doc_id = JsonSerializer.Deserialize<TextDocId>(node_doc_id)!;
+        doc_id = node_doc_id.ConvertTo<TextDocId>()!;
         JsonArray arr = node["contentChanges"]!.AsArray();
 
         int reason_int = node["reason"]!.GetValue<int>();
@@ -48,6 +49,10 @@ public class WillSaveTextDocParams : IJson
     }
 }
 
+/*
+客户端保存文件前，发送给服务器。
+发送的 DocId 应该处于 Open 状态
+*/
 public class NtfWillSaveDoc : JsonNtfBase<WillSaveTextDocParams>
 {
     public override string m_method => "textDocument/willSave";
