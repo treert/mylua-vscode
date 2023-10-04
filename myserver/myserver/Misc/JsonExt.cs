@@ -24,6 +24,7 @@ namespace MyServer.Misc
 
         public static T ConvertTo<T>(this JsonNode node)
         {
+            // 这个实现性能并不好。它会先序列化成字符串，然后再重新解析一遍。(⊙o⊙)…
             T t = JsonSerializer.Deserialize<T>(node, s_json_options)!;
             return t;
         }
@@ -37,6 +38,16 @@ namespace MyServer.Misc
         public static void AddKeyValue(this JsonObject json, string key, object? value)
         {
             json.Add(key, value?.ToJsonNode());
+        }
+
+        public static bool TryAddKeyValue(this JsonObject json, string key, object? value)
+        {
+            if (value != null)
+            {
+                json.Add(key, value.ToJsonNode());
+                return true;
+            }
+            return false;
         }
     }
 
