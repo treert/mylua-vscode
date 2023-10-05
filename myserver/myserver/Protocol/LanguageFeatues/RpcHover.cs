@@ -5,13 +5,17 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Text.Json.Nodes;
+using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 
 namespace MyServer.Protocol.LanguageFeatues;
 
-public static class MarkupKind{
-    public const string PlainText = "plaintext";
-    public const string Markdown = "markdown";
+
+[JsonConverter(typeof(MyJsonEnumConverter))]
+public enum MarkupKind
+{
+    PlainText,
+    Markdown,
 }
 
 public class MarkupContent
@@ -19,7 +23,7 @@ public class MarkupContent
     /// <summary>
     /// MarkupKind : plaintext | markdown
     /// </summary>
-    public string kind {  get; set; }
+    public MarkupKind kind {  get; set; }
     public string value { get; set; }
 }
 

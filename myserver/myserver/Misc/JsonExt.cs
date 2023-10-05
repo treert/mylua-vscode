@@ -15,6 +15,7 @@ namespace MyServer.Misc
         private static JsonSerializerOptions s_json_options = new JsonSerializerOptions()
         {
             WriteIndented = false,
+            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
         };
 
         public static string ToJsonStr(this JsonNode node)
@@ -48,6 +49,65 @@ namespace MyServer.Misc
                 return true;
             }
             return false;
+        }
+    }
+
+    [AttributeUsage(AttributeTargets.Field, AllowMultiple = false)]
+    public sealed class MyEnumAttribute : Attribute
+    {
+        public string? Name {  get; set; }
+    }
+
+    public class MyJsonEnumConverter : JsonConverter<object>
+    {
+        /// <inheritdoc/>
+        public override bool CanConvert(Type typeToConvert)
+        {
+            return typeToConvert.IsEnum || Nullable.GetUnderlyingType(typeToConvert)?.IsEnum == true;
+        }
+        /// <inheritdoc/>
+        public override object? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+        {
+            var enumType = Nullable.GetUnderlyingType(typeToConvert) ?? typeToConvert;
+            if (reader.TokenType == JsonTokenType.String)
+            {
+                string str = reader.GetString()!;
+                // 如果遇到不认识的，当成 -1 处理好了。
+                var ok = Enum.TryParse(enumType, str, true, out var result);
+                if (ok)
+                {
+                    return result;
+                }
+                else
+                {
+                    return Enum.ToObject(enumType, -1);
+                }
+            }
+            else if (reader.TokenType == JsonTokenType.Number)
+            {
+                int num = reader.GetInt32();
+                return Enum.ToObject(enumType, num);
+            }
+            throw new Exception();
+        }
+        /// <inheritdoc/>
+        public override void Write(Utf8JsonWriter writer, object value, JsonSerializerOptions options)
+        {
+            writer.WriteStringValue(GetMyName((value as Enum)!));
+        }
+
+        static string GetMyName(Enum source)
+        {
+            System.Reflection.FieldInfo? fi = source.GetType().GetField(source.ToString());
+            if (fi != null)
+            {
+                MyEnumAttribute[] attributes = (MyEnumAttribute[])fi.GetCustomAttributes(typeof(MyEnumAttribute), false);
+                if (attributes != null && attributes.Length > 0 && attributes[0].Name != null)
+                {
+                    return attributes[0].Name!;
+                }
+            }
+            return source.ToString().ToLower();// 默认全小写
         }
     }
 

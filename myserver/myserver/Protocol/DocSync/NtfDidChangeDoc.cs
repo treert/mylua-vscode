@@ -15,7 +15,6 @@ namespace MyServer.Protocol;
 public class TextDocContentChangeEvent
 {
     public string text { get; set; }
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public Range? range { get; set; }
 }
 

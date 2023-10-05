@@ -267,6 +267,21 @@ public enum SymbolTag
     Deprecated = 1,
 }
 
+public class ArrayResult<T> : IJson
+{
+    public List<T> Items { get; set; } = new List<T>();
+
+    public void ReadFrom(JsonNode node)
+    {
+        Items = node.ConvertTo<List<T>>();
+    }
+
+    public JsonNode ToJsonNode()
+    {
+        return Items.ToJsonNode();
+    }
+}
+
 public class ResponseError : IJson
 {
     public int code;
@@ -357,7 +372,6 @@ public class TextEdit
     /// A special text edit with an additional change annotation.
     /// @since 3.16.0.
     /// </summary>
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? annotationId { get; set; }
 }
 
@@ -376,7 +390,6 @@ public class ExecutionSummary
     /// <summary>
     /// Whether the execution was successful or not if known by the client.
     /// </summary>
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public bool? success { get; set; }
 }
 
@@ -390,6 +403,22 @@ public enum NotebookCellKind
     /// A code-cell is source code.
     /// </summary>
     Code = 2,
+}
+
+public class Command
+{
+    /// <summary>
+    /// Title of the command, like `save`.
+    /// </summary>
+    public string title { get; set; }
+    /// <summary>
+    /// The identifier of the actual command handler.
+    /// </summary>
+    public string command { get; set; }
+    /// <summary>
+    /// Arguments that the command handler should be invoked with.
+    /// </summary>
+    public JsonArray? arguments { get; set; }
 }
 
 public class NotebookCell

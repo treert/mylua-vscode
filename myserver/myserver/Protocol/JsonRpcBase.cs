@@ -197,9 +197,9 @@ namespace MyServer.Protocol
             m_id = MyId.NewId();
             data["id"] = m_id.ToJsonNode();
             data["method"] = m_method;
-            if (m_res != null)
+            if (m_req != null)
             {
-                data["params"] = m_res.ToJsonNode();
+                data["params"] = m_req.ToJsonNode();
             }
             JsonRpcMgr.Instance.SendRequest(this, data);
         }
@@ -242,5 +242,10 @@ namespace MyServer.Protocol
         {
             My.Logger.Error($"rpc.OnError id={m_id} err={m_err!.ToJsonNode()}");
         }
+    }
+
+    public abstract class JsonRpcEmptyBase : JsonRpcBase<EmptyObject,EmptyObject>
+    {
+
     }
 }

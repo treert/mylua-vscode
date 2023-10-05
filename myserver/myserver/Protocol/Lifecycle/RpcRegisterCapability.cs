@@ -22,7 +22,6 @@ public class Registration
 {
     public string id { get; set; }
     public string method { get; set; }
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public JsonNode? registerOptions { get; set; }
 }
 
