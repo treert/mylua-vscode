@@ -267,20 +267,7 @@ public enum SymbolTag
     Deprecated = 1,
 }
 
-public class ArrayResult<T> : IJson
-{
-    public List<T> Items { get; set; } = new List<T>();
 
-    public void ReadFrom(JsonNode node)
-    {
-        Items = node.ConvertTo<List<T>>();
-    }
-
-    public JsonNode ToJsonNode()
-    {
-        return Items.ToJsonNode();
-    }
-}
 
 public class ResponseError : IJson
 {

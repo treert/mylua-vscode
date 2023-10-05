@@ -38,12 +38,12 @@ public class SelectionRangeResult : IJson
     public List<SelectionRange> ranges = new();
     public void ReadFrom(JsonNode node)
     {
-        ranges = 
+        ranges = node.ConvertTo<List<SelectionRange>>();
     }
 
     public JsonNode ToJsonNode()
     {
-        throw new NotImplementedException();
+        return ranges.ToJsonNode();
     }
 }
 
