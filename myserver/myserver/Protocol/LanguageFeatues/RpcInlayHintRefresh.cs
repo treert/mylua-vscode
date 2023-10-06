@@ -7,7 +7,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace MyServer.Protocol.LanguageFeatues;
+namespace MyServer.Protocol;
 
 [MyProto(Direction = ProtoDirection.ToClient)]
 public class RpcInlayHintRefresh : JsonRpcBase<Dummy, Dummy>

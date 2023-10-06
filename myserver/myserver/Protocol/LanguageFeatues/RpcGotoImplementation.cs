@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace MyServer.Protocol.LanguageFeatues;
+namespace MyServer.Protocol;
 
 public class RpcGotoImplementation : JsonRpcBase<PosAndTokenParams, GotoDeclareResult>
 {

@@ -8,7 +8,7 @@ using System.Text.Json.Nodes;
 using System.Threading.Tasks;
 using static System.Net.Mime.MediaTypeNames;
 
-namespace MyServer.Protocol.LanguageFeatues;
+namespace MyServer.Protocol;
 
 public class DocIdAndTokenParams : IWorkDoneProgress, IPartialResult
 {

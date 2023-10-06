@@ -6,7 +6,7 @@ using System.Text;
 using System.Text.Json.Nodes;
 using System.Threading.Tasks;
 
-namespace MyServer.Protocol.LanguageFeatues;
+namespace MyServer.Protocol;
 
 
 public class RpcGotoDefinition : JsonRpcBase<PosAndTokenParams, GotoDeclareResult>

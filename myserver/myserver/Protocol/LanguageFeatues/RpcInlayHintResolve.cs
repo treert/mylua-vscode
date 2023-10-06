@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace MyServer.Protocol.LanguageFeatues;
+namespace MyServer.Protocol;
 
 [MyProto(Direction = ProtoDirection.ToServer)]
 public class RpcInlayHintResolve : JsonRpcBase<InlayHint, InlayHint>

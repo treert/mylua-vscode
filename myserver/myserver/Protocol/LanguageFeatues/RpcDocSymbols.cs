@@ -9,7 +9,7 @@ using System.Text;
 using System.Text.Json.Nodes;
 using System.Threading.Tasks;
 
-namespace MyServer.Protocol.LanguageFeatues;
+namespace MyServer.Protocol;
 
 /// <summary>
 /// Represents programming constructs like variables, classes, interfaces etc.
