@@ -1,4 +1,4 @@
-﻿using MyServer.JsonRpc;
+﻿
 using MyServer.Misc;
 using System;
 using System.Collections.Generic;
@@ -22,21 +22,7 @@ public class CallHierarchyOutgoingCall
     public Range[] fromRanges { get; set; }
 }
 
-public class CallHierarchyOutgoingResult : IJson
-{
-    public List<CallHierarchyOutgoingCall> items = new List<CallHierarchyOutgoingCall>();
-    public void ReadFrom(JsonNode node)
-    {
-        items = node.ConvertTo<List<CallHierarchyOutgoingCall>>();
-    }
-
-    public JsonNode ToJsonNode()
-    {
-        return items.ToJsonNode();
-    }
-}
-
-public class RpcCallHierarchyOutgoing : JsonRpcBase<CallHierarchyIncomingParams, CallHierarchyOutgoingResult>
+public class RpcCallHierarchyOutgoing : JsonRpcBase<CallHierarchyIncomingParams, List<CallHierarchyOutgoingCall>>
 {
     public override string m_method => "callHierarchy/outgoingCalls";
 

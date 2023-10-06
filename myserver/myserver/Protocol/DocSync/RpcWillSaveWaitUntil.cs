@@ -1,4 +1,4 @@
-﻿using MyServer.JsonRpc;
+﻿
 using MyServer.Misc;
 using System;
 using System.Collections.Generic;
@@ -9,25 +9,11 @@ using System.Threading.Tasks;
 
 namespace MyServer.Protocol;
 
-public class WillSaveWaitUntilResult : IJson
-{
-    public List<TextEdit> edits = new List<TextEdit>();
-    public void ReadFrom(JsonNode node)
-    {
-        edits = node.ConvertTo<List<TextEdit>>();
-    }
-
-    public JsonNode ToJsonNode()
-    {
-        return edits.ToJsonNode();
-    }
-}
-
 /*
 类似 NtfWillSave 但是给予服务器修改文件的机会。
 客户端可以丢弃服务器返回的修改。
  */
-public class RpcWillSaveWaitUntil : JsonRpcBase<WillSaveTextDocParams, WillSaveWaitUntilResult>
+public class RpcWillSaveWaitUntil : JsonRpcBase<WillSaveTextDocParams, List<TextEdit>>
 {
     public override string m_method => "textDocument/willSaveWaitUntil";
 

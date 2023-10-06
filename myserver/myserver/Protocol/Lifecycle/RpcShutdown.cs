@@ -1,4 +1,5 @@
-﻿using MyServer.JsonRpc;
+﻿
+using MyServer.Misc;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -11,7 +12,7 @@ namespace MyServer.Protocol;
 /// <summary>
 /// 通知服务器关闭。rpc shutdown 返回后。客户端再使用 ntf 通知服务器退出。
 /// </summary>
-public class RpcShutdown : JsonRpcBase<EmptyObject, EmptyObject>
+public class RpcShutdown : JsonRpcBase<Dummy, Dummy>
 {
     public override string m_method => "shutdown";
 

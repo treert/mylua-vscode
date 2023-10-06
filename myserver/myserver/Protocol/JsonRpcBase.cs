@@ -1,4 +1,4 @@
-﻿using MyServer.JsonRpc;
+﻿
 using MyServer.Misc;
 using System;
 using System.Collections.Generic;
@@ -34,49 +34,6 @@ Notify 生命周期
 
 namespace MyServer.Protocol
 {
-    public abstract class JsonNtfBase
-    {
-        public abstract string m_method { get; }
-        public virtual void OnNotifyParseArgs(JsonNode? args) { }
-        /// <summary>
-        /// 子类需要实现
-        /// </summary>
-        public abstract void OnNotify();
-        /// <summary>
-        /// 发送请求。如果有参数，设置好参数后，再调用。
-        /// </summary>
-        public virtual void SendNotify()
-        {
-            JsonObject data = new();
-            data["method"] = m_method;
-            JsonRpcMgr.Instance.SendData(data);
-        }
-    }
-
-    public abstract class JsonNtfBase<TArgs>: JsonNtfBase where TArgs:IJson,new()
-    {
-        public TArgs m_args = new TArgs();
-
-        public override sealed void OnNotifyParseArgs(JsonNode? args)
-        {
-            if (args is not null)
-            {
-                m_args.ReadFrom(args);
-            }
-        }
-
-        public override sealed void SendNotify()
-        {
-            JsonObject data = new();
-            data["method"] = m_method;
-            if(m_args is not null)
-            {
-                data["params"] = m_args.ToJsonNode();
-            }
-            JsonRpcMgr.Instance.SendData(data);
-        }
-    }
-
     public abstract class JsonRpcBase
     {
         public enum Status
@@ -150,7 +107,7 @@ namespace MyServer.Protocol
     }
 
     public abstract class JsonRpcBase<TReq, TRes>: JsonRpcBase
-        where TReq: IJson,new() where TRes: IJson, new()
+        where TReq: class where TRes: class
     {
         public TReq? m_req;
         public TRes? m_res;
@@ -158,24 +115,12 @@ namespace MyServer.Protocol
 
         public override sealed void OnRequestParseArgs(JsonNode? args)
         {
-            m_status = Status.OnRequestParseArgs;
-            if (args != null)
-            {
-                m_req = new TReq();
-                m_req.ReadFrom(args);
-                PostOnRequestParseArgs(args);
-            }
-        }
-
-        public virtual void PostOnRequestParseArgs(JsonNode args)
-        {
-
+            m_req = args?.ConvertTo<TReq>();
         }
 
         public override sealed void SendResponse()
         {
             My.Logger.Debug($"SendResponse id={m_id} {m_method}");
-            m_status = Status.SendResponse;
             var data = new JsonObject();
             data["id"] = m_id.ToJsonNode();
             if (m_err != null)
@@ -192,7 +137,6 @@ namespace MyServer.Protocol
         public override sealed void SendRequest()
         {
             My.Logger.Debug($"SendRequest id={m_id} {m_method}");
-            m_status = Status.SendRequest;
             var data = new JsonObject();
             m_id = MyId.NewId();
             data["id"] = m_id.ToJsonNode();
@@ -208,7 +152,10 @@ namespace MyServer.Protocol
         {
             My.Logger.Debug($"SendCancel id={m_id} {m_method}");
             NtfCancelRequest ntf = new NtfCancelRequest();
-            ntf.m_args.id = m_id;
+            ntf.m_args = new CancelParams()
+            {
+                id = m_id,
+            };
             ntf.SendNotify();
         }
 
@@ -218,10 +165,9 @@ namespace MyServer.Protocol
             {
                 m_err = error;
             }
-            else if(result != null)
+            else
             {
-                m_res = new TRes();
-                m_res.ReadFrom(result);
+                m_res = result?.ConvertTo<TRes>();
             }
         }
 
@@ -244,7 +190,7 @@ namespace MyServer.Protocol
         }
     }
 
-    public abstract class JsonRpcEmptyBase : JsonRpcBase<EmptyObject,EmptyObject>
+    public abstract class JsonRpcEmptyBase : JsonRpcBase<Dummy,Dummy>
     {
 
     }

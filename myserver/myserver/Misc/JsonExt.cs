@@ -10,6 +10,13 @@ using System.Text.Json.Nodes;
 
 namespace MyServer.Misc
 {
+    /// <summary>
+    /// 空类型。占位使用。
+    /// </summary>
+    public class Dummy
+    {
+    }
+
     public static class MyJsonExt
     {
         private static JsonSerializerOptions s_json_options = new JsonSerializerOptions()
@@ -23,10 +30,21 @@ namespace MyServer.Misc
             return node.ToJsonString(s_json_options);
         }
 
-        public static T ConvertTo<T>(this JsonNode node)
+        public static string ToJsonStr(this object obj)
+        {
+            return JsonSerializer.Serialize(obj, s_json_options);
+        }
+
+        public static T ConvertTo<T>(this JsonNode? node)
         {
             // 这个实现性能并不好。它会先序列化成字符串，然后再重新解析一遍。(⊙o⊙)…
             T t = JsonSerializer.Deserialize<T>(node, s_json_options)!;
+            return t;
+        }
+
+        public static T ConvertTo<T>(this string json)
+        {
+            T t = JsonSerializer.Deserialize<T>(json, s_json_options)!;
             return t;
         }
 
@@ -87,6 +105,10 @@ namespace MyServer.Misc
             {
                 int num = reader.GetInt32();
                 return Enum.ToObject(enumType, num);
+            }
+            else if (reader.TokenType == JsonTokenType.Null)
+            {
+                return null;
             }
             throw new Exception();
         }

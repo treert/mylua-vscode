@@ -1,4 +1,4 @@
-﻿using MyServer.JsonRpc;
+﻿
 using MyServer.Misc;
 using System;
 using System.Collections.Generic;
@@ -12,24 +12,10 @@ namespace MyServer.Protocol.LanguageFeatues;
 
 
 
-public class HoverResult : IJson
+public class HoverResult
 {
     public MarkupContent contents { get; set; }
     public Range? range { get; set; }
-
-    public void ReadFrom(JsonNode node)
-    {
-        contents = node["contents"]!.ConvertTo<MarkupContent>();
-        range = node["range"]?.ConvertTo<Range>();
-    }
-
-    public JsonNode ToJsonNode()
-    {
-        JsonObject data = new JsonObject();
-        data.AddKeyValue("contents", contents);
-        data.TryAddKeyValue("range", range);
-        return data;
-    }
 }
 
 

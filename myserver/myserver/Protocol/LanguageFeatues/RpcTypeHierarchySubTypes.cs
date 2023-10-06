@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace MyServer.Protocol.LanguageFeatues;
 
-public class RpcTypeHierarchySubTypes : JsonRpcBase<TypeHierarchySupertypesParams, TypeHierarchySupertypesResult>
+public class RpcTypeHierarchySubTypes : JsonRpcBase<TypeHierarchySupertypesParams, List<TypeHierarchyItem>>
 {
     public override string m_method => "typeHierarchy/subtypes";
 

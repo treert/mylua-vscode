@@ -1,4 +1,4 @@
-﻿using MyServer.JsonRpc;
+﻿
 using MyServer.Misc;
 using MyServer.Protocol.BaseStruct;
 using System;
@@ -31,20 +31,6 @@ public class InlineValueParams : DocIdAndTokenParams
     /// </summary>
     public Range range { get; set; }
     public InlineValueContext context { get; set; }
-    public override void ReadFrom(JsonNode node)
-    {
-        base.ReadFrom(node);
-        range = node["range"]!.ConvertTo<Range>();
-        context = node["context"]!.ConvertTo<InlineValueContext>();
-    }
-
-    public override JsonNode ToJsonNode()
-    {
-        var data = base.ToJsonNode().AsObject();
-        data.AddKeyValue("range", range);
-        data.AddKeyValue("context", context);
-        return data;
-    }
 }
 
 /// <summary>
@@ -61,7 +47,7 @@ public class InlineValue
 }
 
 [MyProto(Direction = ProtoDirection.ToServer)]
-public class RpcInlineValue : JsonRpcBase<InlineValueParams, OneJson<InlineValue>>
+public class RpcInlineValue : JsonRpcBase<InlineValueParams, InlineValue>
 {
     public override string m_method => "textDocument/inlineValue";
 

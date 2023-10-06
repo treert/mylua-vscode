@@ -1,4 +1,4 @@
-﻿using MyServer.JsonRpc;
+﻿
 using MyServer.Misc;
 using System;
 using System.Collections.Generic;
@@ -8,28 +8,12 @@ using System.Text.Json.Nodes;
 using System.Threading.Tasks;
 
 namespace MyServer.Protocol.LanguageFeatues;
-public class CallHierarchyIncomingParams : IJson, IWorkDoneProgress, IPartialResult
+public class CallHierarchyIncomingParams : IWorkDoneProgress, IPartialResult
 {
     public ProgressToken? partialResultToken { get; set; }
     public ProgressToken? workDoneToken { get; set; }
 
-    public CallHierarchyItem item;
-
-    public virtual void ReadFrom(JsonNode node)
-    {
-        item = node["item"]!.ConvertTo<CallHierarchyItem>();
-        partialResultToken = node["partialResultToken"];
-        workDoneToken = node["workDoneToken"];
-    }
-
-    public virtual JsonNode ToJsonNode()
-    {
-        JsonObject data = new JsonObject();
-        data.AddKeyValue("item", item);
-        data.TryAddKeyValue("partialResultToken", partialResultToken);
-        data.TryAddKeyValue("workDoneToken", workDoneToken);
-        return data;
-    }
+    public CallHierarchyItem item { get; set; }
 }
 
 public class CallHierarchyIncomingCall
@@ -45,21 +29,7 @@ public class CallHierarchyIncomingCall
     public Range[] fromRanges { get; set; }
 }
 
-public class CallHierarchyIncomingResult : IJson
-{
-    public List<CallHierarchyIncomingCall> items = new List<CallHierarchyIncomingCall>();
-    public void ReadFrom(JsonNode node)
-    {
-        items = node.ConvertTo<List<CallHierarchyIncomingCall>>();
-    }
-
-    public JsonNode ToJsonNode()
-    {
-        return items.ToJsonNode();
-    }
-}
-
-public class RpcCallHierarchyIncoming : JsonRpcBase<CallHierarchyIncomingParams, CallHierarchyIncomingResult>
+public class RpcCallHierarchyIncoming : JsonRpcBase<CallHierarchyIncomingParams, List<CallHierarchyIncomingCall>>
 {
     public override string m_method => "callHierarchy/incomingCalls";
 

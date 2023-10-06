@@ -1,4 +1,4 @@
-﻿using MyServer.JsonRpc;
+﻿
 using MyServer.Misc;
 using System;
 using System.Collections.Generic;
@@ -12,39 +12,13 @@ namespace MyServer.Protocol.LanguageFeatues;
 
 public class SelectionRangeParams : DocIdAndTokenParams
 {
-    public Position[] positions;
-    public override void ReadFrom(JsonNode node)
-    {
-        base.ReadFrom(node);
-        positions = node["positions"]!.ConvertTo<Position[]>();
-    }
-
-    public override JsonNode ToJsonNode()
-    {
-        var data = base.ToJsonNode().AsObject();
-        data.AddKeyValue("positions", positions);
-        return data;
-    }
+    public Position[] positions { get; set; }
 }
 
 public class SelectionRange
 {
     public Range range { get; set; }
     public SelectionRange? parent { get; set; }
-}
-
-public class SelectionRangeResult : IJson
-{
-    public List<SelectionRange> ranges = new();
-    public void ReadFrom(JsonNode node)
-    {
-        ranges = node.ConvertTo<List<SelectionRange>>();
-    }
-
-    public JsonNode ToJsonNode()
-    {
-        return ranges.ToJsonNode();
-    }
 }
 
 /// <summary>
@@ -54,7 +28,7 @@ public class SelectionRangeResult : IJson
 /// <br/>
 /// Typically, but not necessary, selection ranges correspond to the nodes of the syntax tree.
 /// </summary>
-public class RpcSelectionRange : JsonRpcBase<SelectionRangeParams, SelectionRangeResult>
+public class RpcSelectionRange : JsonRpcBase<SelectionRangeParams, List<SelectionRange>>
 {
     public override string m_method => "textDocument/selectionRange";
 

@@ -1,4 +1,4 @@
-﻿using MyServer.JsonRpc;
+﻿
 using MyServer.Misc;
 using System;
 using System.Collections.Generic;
@@ -39,21 +39,8 @@ public class DocumentSymbol
     public DocumentSymbol[]? children { get; set; }
 }
 
-public class DocSymbolsResult : IJson
-{
-    public List<DocumentSymbol> symbols = new List<DocumentSymbol>();
-    public void ReadFrom(JsonNode node)
-    {
-        symbols = node.ConvertTo<List<DocumentSymbol>>();
-    }
 
-    public JsonNode ToJsonNode()
-    {
-        return symbols.ToJsonNode();
-    }
-}
-
-public class RpcDocSymbols : JsonRpcBase<DocIdAndTokenParams, DocSymbolsResult>
+public class RpcDocSymbols : JsonRpcBase<DocIdAndTokenParams, List<DocumentSymbol>>
 {
     public override string m_method => "textDocument/documentSymbol";
 

@@ -1,4 +1,4 @@
-﻿using MyServer.JsonRpc;
+﻿
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -28,25 +28,10 @@ public enum TextDocSaveReason
     FocusOut = 3,
 }
 
-public class WillSaveTextDocParams : IJson
+public class WillSaveTextDocParams
 {
-    public TextDocId doc_id;
-    public TextDocSaveReason reason;
-
-    public void ReadFrom(JsonNode node)
-    {
-        JsonNode node_doc_id = node["textDocument"]!;
-        doc_id = node_doc_id.ConvertTo<TextDocId>()!;
-        JsonArray arr = node["contentChanges"]!.AsArray();
-
-        int reason_int = node["reason"]!.GetValue<int>();
-        reason =(TextDocSaveReason)(reason_int);
-    }
-
-    public JsonNode ToJsonNode()
-    {
-        throw new NotImplementedException();
-    }
+    public TextDocId textDocument { get; set; }
+    public TextDocSaveReason reason { get; set; }
 }
 
 /*

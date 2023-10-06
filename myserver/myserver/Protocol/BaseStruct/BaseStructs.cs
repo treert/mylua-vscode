@@ -1,6 +1,5 @@
 
 // lsp 里定义的一些 id: integer | string;
-using MyServer.JsonRpc;
 using MyServer.Misc;
 using System;
 using System.Buffers.Text;
@@ -11,13 +10,14 @@ using System.Text.Json.Serialization;
 namespace MyServer.Protocol;
 
 [JsonConverter(typeof(MyIdJsonConverter))]
-public class MyId : IEquatable<int>, IEquatable<string>, IJson
+public record MyId : IEquatable<int>, IEquatable<string>
 {
     private int? _number;
     private string? _string;
 
     public MyId()
     {
+        _number = null;
         _string = string.Empty;
     }
 
@@ -57,7 +57,7 @@ public class MyId : IEquatable<int>, IEquatable<string>, IJson
         }
     }
 
-    static int s_num = 0;
+    static int s_num = 1;
     public static MyId NewId()
     {
         int num = Interlocked.Increment(ref s_num);
@@ -87,13 +87,20 @@ public class MyId : IEquatable<int>, IEquatable<string>, IJson
 
     public static implicit operator JsonNode(MyId id)
     {
-        return id.ToJsonNode();
+        if (id.IsNumber)
+        {
+            return id.Number;
+        }
+        else
+        {
+            return id.String!;
+        }
     }
 
     public bool Equals(int other) => IsNumber && _number == other;
     public bool Equals(string? other) => IsString && _string == other;
 
-    private string DebuggerDisplay => IsString ? String : IsNumber ? Number.ToString() : "";
+    private string DebuggerDisplay => IsString ? String : Number.ToString();
 
     public override string ToString() => DebuggerDisplay;
 
@@ -135,8 +142,14 @@ public class MyIdJsonConverter : JsonConverter<MyId>
 
     public override void Write(Utf8JsonWriter writer, MyId value, JsonSerializerOptions options)
     {
-        JsonNode node = value;
-        JsonSerializer.Serialize(writer, node, options);
+        if (value.IsString)
+        {
+            writer.WriteStringValue(value.String);
+        }
+        else
+        {
+            writer.WriteNumberValue(value.Number);
+        }
     }
 }
 
@@ -216,32 +229,11 @@ public enum SymbolTag
 
 
 
-public class ResponseError : IJson
+public class ResponseError
 {
-    public int code;
-    public string message = string.Empty;
-    public JsonNode? data;
-
-    public void ReadFrom(JsonNode node)
-    {
-        code = node!["code"]!.GetValue<int>();
-        message = node!["message"]!.GetValue<string>();
-        data = node!["data"];
-    }
-
-    public JsonNode ToJsonNode()
-    {
-        JsonObject result = new()
-            {
-                { "code", code },
-                { "message", message }
-            };
-        if (data != null)
-        {
-            result["data"] = data;
-        }
-        return result;
-    }
+    public int code { get; set; }
+    public string message { get; set; }
+    public JsonNode? data { get; set; }
 }
 
 

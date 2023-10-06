@@ -1,4 +1,4 @@
-﻿using MyServer.JsonRpc;
+﻿
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -8,20 +8,9 @@ using System.Threading.Tasks;
 
 namespace MyServer.Protocol
 {
-    public class CancelParams : IJson
+    public class CancelParams
     {
-        public MyId id;
-        public void ReadFrom(JsonNode node)
-        {
-            id = node["id"]!;
-        }
-
-        public JsonNode ToJsonNode()
-        {
-            JsonObject data = new JsonObject();
-            data.Add("id", id.ToJsonNode());
-            return data;
-        }
+        public MyId id { get; set; }
     }
     public class NtfCancelRequest : JsonNtfBase<CancelParams>
     {
@@ -29,7 +18,7 @@ namespace MyServer.Protocol
 
         public override void OnNotify()
         {
-            JsonRpcMgr.Instance.CancelRequest(m_args.id);
+            JsonRpcMgr.Instance.CancelRequest(Args.id);
         }
     }
 

@@ -9,25 +9,12 @@ using System.Runtime.Intrinsics.X86;
 using System.Text;
 using System.Text.Json.Nodes;
 using System.Threading.Tasks;
-using Range = MyServer.Protocol.BaseStruct.Range;
 
 namespace MyServer.Protocol.LanguageFeatues;
 
 public class InlayHintParams : DocIdAndTokenParams
 {
-    public Range range;
-    public override void ReadFrom(JsonNode node)
-    {
-        base.ReadFrom(node);
-        range = node["range"]!.ConvertTo<Range>();
-    }
-
-    public override JsonNode ToJsonNode()
-    {
-        var data = base.ToJsonNode().AsObject();
-        data.AddKeyValue("range", range);
-        return data;
-    }
+    public Range range {  get; set; }
 }
 
 public enum InlayHintKind
@@ -125,7 +112,7 @@ public class InlayHint
 }
 
 [MyProto(Direction = ProtoDirection.ToServer)]
-public class RpcInlayHint : JsonRpcBase<InlayHintParams, ArrayJson<InlayHint>>
+public class RpcInlayHint : JsonRpcBase<InlayHintParams, List<InlayHint>>
 {
     public override string m_method => "textDocument/inlayHint";
 

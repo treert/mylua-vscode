@@ -1,4 +1,4 @@
-﻿using MyServer.JsonRpc;
+﻿
 using MyServer.Misc;
 using System;
 using System.Collections.Generic;
@@ -9,21 +9,7 @@ using System.Threading.Tasks;
 
 namespace MyServer.Protocol.LanguageFeatues;
 
-public class DocumentLinkParamsAndResult : IJson
-{
-    public DocumentLink link = new DocumentLink();
-    public void ReadFrom(JsonNode node)
-    {
-        link = node.ConvertTo<DocumentLink>();
-    }
-
-    public JsonNode ToJsonNode()
-    {
-        return link.ToJsonNode();
-    }
-}
-
-public class RpcDocLinkResolve : JsonRpcBase<DocumentLinkParamsAndResult, DocumentLinkParamsAndResult>
+public class RpcDocLinkResolve : JsonRpcBase<DocumentLink, DocumentLink>
 {
     public override string m_method => "documentLink/resolve";
 

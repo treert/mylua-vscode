@@ -169,7 +169,7 @@ public class CompletionItem
 }
 
 [MyProto(Direction = ProtoDirection.ToServer)]
-public class RpcCompletion : JsonRpcBase<OneJson<CompletionParams>, ArrayJson<CompletionItem>>
+public class RpcCompletion : JsonRpcBase<CompletionParams, List<CompletionItem>>
 {
     public override string m_method => "textDocument/completion";
 
@@ -190,7 +190,7 @@ public class RpcCompletion : JsonRpcBase<OneJson<CompletionParams>, ArrayJson<Co
 }
 
 [MyProto(Direction = ProtoDirection.ToServer)]
-public class RpcCompletionItemResolve : JsonRpcBase<OneJson<CompletionItem>, OneJson<CompletionItem>>
+public class RpcCompletionItemResolve : JsonRpcBase<CompletionItem, CompletionItem>
 {
     public override string m_method => "completionItem/resolve";
 

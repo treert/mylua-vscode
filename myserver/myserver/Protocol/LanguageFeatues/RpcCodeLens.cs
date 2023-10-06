@@ -1,4 +1,4 @@
-﻿using MyServer.JsonRpc;
+﻿
 using MyServer.Misc;
 using System;
 using System.Collections.Generic;
@@ -35,21 +35,7 @@ public class CodeLens
     public JsonNode? data { get; set; }
 }
 
-public class CodeLensResult : IJson
-{
-    public List<CodeLens> codeLens = new List<CodeLens>();
-    public void ReadFrom(JsonNode node)
-    {
-        codeLens = node.ConvertTo<List<CodeLens>>();
-    }
-
-    public JsonNode ToJsonNode()
-    {
-        return codeLens.ToJsonNode();
-    }
-}
-
-public class RpcCodeLens : JsonRpcBase<DocIdAndTokenParams, CodeLensResult>
+public class RpcCodeLens : JsonRpcBase<DocIdAndTokenParams, List<CodeLens>>
 {
     public override string m_method => "textDocument/codeLens";
 
@@ -69,21 +55,7 @@ public class RpcCodeLens : JsonRpcBase<DocIdAndTokenParams, CodeLensResult>
     }
 }
 
-public class CodelensParamsAndResult : IJson
-{
-    public CodeLens codeLens = new();
-    public void ReadFrom(JsonNode node)
-    {
-        codeLens = node.ConvertTo<CodeLens>();
-    }
-
-    public JsonNode ToJsonNode()
-    {
-        return codeLens.ToJsonNode();
-    }
-}
-
-public class RpcCodeLensResolve : JsonRpcBase<CodelensParamsAndResult, CodelensParamsAndResult>
+public class RpcCodeLensResolve : JsonRpcBase<CodeLens, CodeLens>
 {
     public override string m_method => "codeLens/resolve";
 
@@ -103,7 +75,7 @@ public class RpcCodeLensResolve : JsonRpcBase<CodelensParamsAndResult, CodelensP
     }
 }
 
-public class RpcCodeLensRefresh : JsonRpcBase<EmptyObject, EmptyObject>
+public class RpcCodeLensRefresh : JsonRpcBase<Dummy, Dummy>
 {
     public override string m_method => "workspace/codeLens/refresh";
 

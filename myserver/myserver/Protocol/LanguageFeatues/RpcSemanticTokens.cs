@@ -1,4 +1,4 @@
-﻿using MyServer.JsonRpc;
+﻿
 using MyServer.Misc;
 using System;
 using System.Collections.Generic;
@@ -27,7 +27,7 @@ public class SemanticTokensEdit{
 /// <summary>
 /// 混合了 SemanticTokens | SemanticTokensPartial | SemanticTokensDelta | SemanticTokensDeltaPartial
 /// </summary>
-public class SemanticTokensResult : IJson
+public class SemanticTokensResult
 {
     /// <summary>
     /// An optional result id.If provided and clients support delta updating
@@ -45,20 +45,6 @@ public class SemanticTokensResult : IJson
     /// The semantic token edits to transform a previous result into a new result.
     /// </summary>
     public SemanticTokensEdit[]? edits { get; set; }
-
-    public void ReadFrom(JsonNode node)
-    {
-        throw new NotImplementedException();
-    }
-
-    public JsonNode ToJsonNode()
-    {
-        var obj = new JsonObject();
-        obj.TryAddKeyValue("resultId", resultId);
-        obj.TryAddKeyValue("data", data);
-        obj.TryAddKeyValue("edits", edits);
-        return obj;
-    }
 }
 
 public class RpcSemanticTokensFull : JsonRpcBase<DocIdAndTokenParams, SemanticTokensResult>
@@ -88,18 +74,6 @@ public class SemanticTokensDeltaParams : DocIdAndTokenParams
     /// a full response or a delta response depending on what was received last.
     /// </summary>
     public string previousResultId { get; set; }
-    public override void ReadFrom(JsonNode node)
-    {
-        base.ReadFrom(node);
-        previousResultId = (string)node["previousResultId"]!;
-    }
-
-    public override JsonNode ToJsonNode()
-    {
-        var data = base.ToJsonNode().AsObject();
-        data.AddKeyValue("previousResultId", previousResultId);
-        return data;
-    }
 }
 
 
@@ -125,19 +99,7 @@ public class RpcSemanticTokensFullDelta : JsonRpcBase<SemanticTokensDeltaParams,
 
 public class SemanticTokensRangeParams : DocIdAndTokenParams
 {
-    public Range range;
-    public override void ReadFrom(JsonNode node)
-    {
-        base.ReadFrom(node);
-        range = node["range"]!.ConvertTo<Range>();
-    }
-
-    public override JsonNode ToJsonNode()
-    {
-        var data = base.ToJsonNode().AsObject();
-        data.AddKeyValue("range", range);
-        return data;
-    }
+    public Range range { get; set; }
 }
 
 public class RpcSemanticTokensRange : JsonRpcBase<SemanticTokensRangeParams, SemanticTokensResult>
@@ -160,7 +122,7 @@ public class RpcSemanticTokensRange : JsonRpcBase<SemanticTokensRangeParams, Sem
     }
 }
 
-public class RpcSemanticTokensRefresh : JsonRpcBase<EmptyObject, EmptyObject>
+public class RpcSemanticTokensRefresh : JsonRpcBase<Dummy, Dummy>
 {
     public override string m_method => "workspace/semanticTokens/refresh";
 

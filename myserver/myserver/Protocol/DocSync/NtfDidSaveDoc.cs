@@ -1,4 +1,4 @@
-﻿using MyServer.JsonRpc;
+﻿
 using MyServer.Misc;
 using System;
 using System.Collections.Generic;
@@ -9,21 +9,10 @@ using System.Threading.Tasks;
 
 namespace MyServer.Protocol;
 
-public class DidSaveTextDocumentParams : IJson
+public class DidSaveTextDocumentParams
 {
-    public TextDocId doc_id;
-    public string? text;
-
-    public void ReadFrom(JsonNode node)
-    {
-        doc_id = node["textDocument"]!.ConvertTo<TextDocId>();
-        text = (string?)node["text"];
-    }
-
-    public JsonNode ToJsonNode()
-    {
-        throw new NotImplementedException();
-    }
+    public TextDocId textDocument { get; set; }
+    public string? text { get; set; }
 }
 
 public class NtfDidSaveDoc : JsonNtfBase<DidSaveTextDocumentParams>

@@ -1,13 +1,16 @@
-﻿using MyServer.JsonRpc;
+﻿
+using MyServer.Misc;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Text.Json.Nodes;
+using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 
 namespace MyServer.Protocol
 {
+    [JsonConverter(typeof(MyJsonEnumConverter))]
     public enum LspTrace
     {
         Off,
@@ -15,55 +18,14 @@ namespace MyServer.Protocol
         Verbose,
     }
 
-    public static class LspTraceExt
+    public class LogTraceParams
     {
-        public static string TraceToStr(this LspTrace node)
-        {
-            switch (node)
-            {
-                default:
-                    return "off";
-                case LspTrace.Messages:
-                    return "messages";
-                case LspTrace.Verbose:
-                    return "verbose";
-            }
-        }
-
-        public static LspTrace StrToTrace(this string node)
-        {
-            switch (node)
-            {
-                case "messages":
-                    return LspTrace.Messages;
-                case "verbose":
-                    return LspTrace.Verbose;
-                default:
-                    return LspTrace.Off;
-            }
-        }
-    }
-
-    public class LogTraceParams : IJson
-    {
-        public LspTrace? Trace;
-        public string message;
-
-        public void ReadFrom(JsonNode node)
-        {
-            throw new NotImplementedException();
-        }
-
-        public JsonNode ToJsonNode()
-        {
-            JsonObject data = new JsonObject();
-            data.Add("message", message);
-            if (Trace != null)
-            {
-                data.Add("verbose", Trace.Value.TraceToStr());
-            }
-            return data;
-        }
+        /// <summary>
+        /// Additional information that can be computed if the `trace` configuration
+        /// is set to `'verbose'`
+        /// </summary>
+        public LspTrace? Trace { get; set; }
+        public string message { get; set; }
     }
 
     /// <summary>
@@ -79,19 +41,9 @@ namespace MyServer.Protocol
         }
     }
 
-    public class SetTraceParams : IJson
+    public class SetTraceParams
     {
-        public LspTrace Trace;
-        public void ReadFrom(JsonNode node)
-        {
-            var str = node["value"]!.GetValue<string>();
-            Trace = str.StrToTrace();
-        }
-
-        public JsonNode ToJsonNode()
-        {
-            throw new NotImplementedException();
-        }
+        public LspTrace value { get; set; }
     }
 
     public class NtfSetTrace : JsonNtfBase<SetTraceParams>
@@ -100,7 +52,7 @@ namespace MyServer.Protocol
 
         public override void OnNotify()
         {
-            MyServerMgr.Instance.LspTrace = m_args.Trace;
+            MyServerMgr.Instance.LspTrace = Args.value;
         }
     }
 }

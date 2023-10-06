@@ -1,4 +1,4 @@
-﻿using MyServer.JsonRpc;
+﻿
 using MyServer.Misc;
 using System;
 using System.Collections.Generic;
@@ -11,23 +11,9 @@ using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace MyServer.Protocol.LanguageFeatues;
 
-public class CallHierarchyPrepareParams : IWorkDoneProgress, IJson
+public class CallHierarchyPrepareParams : TextDocPosition, IWorkDoneProgress
 {
     public ProgressToken? workDoneToken { get; set; }
-    public TextDocPosition TextDocPosition { get; set; }
-
-    public virtual void ReadFrom(JsonNode node)
-    {
-        TextDocPosition = node.ConvertTo<TextDocPosition>();
-        workDoneToken = node["workDoneToken"];
-    }
-
-    public virtual JsonNode ToJsonNode()
-    {
-        JsonObject data = TextDocPosition.ToJsonNode().AsObject();
-        data.TryAddKeyValue("workDoneToken", workDoneToken);
-        return data;
-    }
 }
 
 public class CallHierarchyItem
@@ -54,21 +40,7 @@ public class CallHierarchyItem
     public JsonNode? data { get; set; }
 }
 
-public class CallHierarchyPrepareResult : IJson
-{
-    public List<CallHierarchyItem> items = new();
-    public void ReadFrom(JsonNode node)
-    {
-        items = node.ConvertTo<List<CallHierarchyItem>>();
-    }
-
-    public JsonNode ToJsonNode()
-    {
-        return items.ToJsonNode();
-    }
-}
-
-public class RpcPrepareCallHierarchy : JsonRpcBase<CallHierarchyPrepareParams, GotoDeclareResult>
+public class RpcPrepareCallHierarchy : JsonRpcBase<CallHierarchyPrepareParams, List<CallHierarchyItem>>
 {
     public override string m_method => "textDocument/prepareCallHierarchy";
 

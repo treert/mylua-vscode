@@ -1,4 +1,4 @@
-﻿using MyServer.JsonRpc;
+﻿
 using MyServer.Misc;
 using System;
 using System.Collections.Generic;
@@ -15,7 +15,7 @@ public class DidOpenDocParams
     public TextDocItem textDocument { get; set; }
 }
 
-public class NtfDidOpenDoc : JsonNtfBase<OneJson<DidOpenDocParams>>
+public class NtfDidOpenDoc : JsonNtfBase<DidOpenDocParams>
 {
     public override string m_method => "textDocument/didOpen";
 

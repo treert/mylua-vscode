@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 namespace MyServer.Protocol.LanguageFeatues;
 
 [MyProto(Direction = ProtoDirection.ToServer)]
-public class RpcInlayHintResolve : JsonRpcBase<OneJson<InlayHint>, OneJson<InlayHint>>
+public class RpcInlayHintResolve : JsonRpcBase<InlayHint, InlayHint>
 {
     public override string m_method => "inlayHint/resolve";
 

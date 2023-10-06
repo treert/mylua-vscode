@@ -1,4 +1,4 @@
-﻿using MyServer.JsonRpc;
+﻿
 using MyServer.Misc;
 using System;
 using System.Collections.Generic;
@@ -34,21 +34,7 @@ public class FoldingRange
     public string? collapsedText { get; set; }
 }
 
-public class FoldingRangeResult : IJson
-{
-    public List<FoldingRange> ranges = new List<FoldingRange>();
-    public void ReadFrom(JsonNode node)
-    {
-        ranges = node.ConvertTo<List<FoldingRange>>();
-    }
-
-    public JsonNode ToJsonNode()
-    {
-        return ranges.ToJsonNode();
-    }
-}
-
-public class RpcFoldingRange : JsonRpcBase<DocIdAndTokenParams, DocIdAndTokenParams>
+public class RpcFoldingRange : JsonRpcBase<DocIdAndTokenParams, List<FoldingRange>>
 {
     public override string m_method => "textDocument/foldingRange";
 

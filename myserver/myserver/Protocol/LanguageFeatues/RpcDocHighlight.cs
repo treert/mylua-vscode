@@ -1,4 +1,4 @@
-﻿using MyServer.JsonRpc;
+﻿
 using MyServer.Misc;
 using System;
 using System.Collections.Generic;
@@ -36,21 +36,7 @@ public class DocumentHighlight
     public DocumentHighlightKind? kind { get; set; }
 }
 
-public class DocHighlightResult : IJson
-{
-    public List<DocumentHighlight> items = new();
-    public void ReadFrom(JsonNode node)
-    {
-        throw new NotImplementedException();
-    }
-
-    public JsonNode ToJsonNode()
-    {
-        return items.ToJsonNode();
-    }
-}
-
-public class RpcDocHighlight : JsonRpcBase<PosAndTokenParams, DocHighlightResult>
+public class RpcDocHighlight : JsonRpcBase<PosAndTokenParams, List<DocumentHighlight>>
 {
     public override string m_method => "textDocument/documentHighlight";
 

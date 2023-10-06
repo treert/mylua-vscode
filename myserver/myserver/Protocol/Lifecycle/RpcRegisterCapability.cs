@@ -1,4 +1,4 @@
-﻿using MyServer.JsonRpc;
+﻿
 using MyServer.Misc;
 using System;
 using System.Collections.Generic;
@@ -25,23 +25,12 @@ public class Registration
     public JsonNode? registerOptions { get; set; }
 }
 
-public class RegistrationParams : IJson
+public class RegistrationParams
 {
-    public List<Registration> regs = new();
-    public void ReadFrom(JsonNode node)
-    {
-        throw new NotImplementedException();
-    }
-
-    public JsonNode ToJsonNode()
-    {
-        JsonObject obj = new JsonObject();
-        obj["registrations"] = regs.ToJsonNode();
-        return obj;
-    }
+    public List<Registration> registrations { get; set; }
 }
 
-public class RpcRegisterCapability : JsonRpcBase<RegistrationParams, EmptyObject>
+public class RpcRegisterCapability : JsonRpcBase<RegistrationParams, Dummy>
 {
     public override string m_method => "client/registerCapability";
 
@@ -67,23 +56,12 @@ public class UnRegistration
     public string method { get; set; }
 }
 
-public class UnRegistrationParams : IJson
+public class UnRegistrationParams
 {
-    public List<UnRegistration> regs = new();
-    public void ReadFrom(JsonNode node)
-    {
-        regs = node["unregisterations"]!.ConvertTo<List<UnRegistration>>();
-    }
-
-    public JsonNode ToJsonNode()
-    {
-        JsonObject obj = new JsonObject();
-        obj["unregisterations"] = regs.ToJsonNode();
-        return obj;
-    }
+    public List<UnRegistration> unregisterations { get; set; }
 }
 
-public class RpcUnregisterCapability : JsonRpcBase<UnRegistrationParams, EmptyObject>
+public class RpcUnregisterCapability : JsonRpcBase<UnRegistrationParams, Dummy>
 {
     public override string m_method => "client/unregisterCapability";
 

@@ -1,4 +1,4 @@
-﻿using MyServer.JsonRpc;
+﻿
 using MyServer.Misc;
 using System;
 using System.Collections.Generic;
@@ -9,19 +9,9 @@ using System.Threading.Tasks;
 
 namespace MyServer.Protocol;
 
-public class DidCloseDocParams : IJson
+public class DidCloseDocParams
 {
-    public TextDocId doc_id;
-
-    public void ReadFrom(JsonNode node)
-    {
-        doc_id = node["textDocument"]!.ConvertTo<TextDocId>();
-    }
-
-    public JsonNode ToJsonNode()
-    {
-        throw new NotImplementedException();
-    }
+    public TextDocId textDocument { get; set; }
 }
 
 /// <summary>

@@ -1,4 +1,4 @@
-﻿using MyServer.JsonRpc;
+﻿
 using MyServer.Misc;
 using System;
 using System.Collections.Generic;
@@ -36,21 +36,7 @@ public class TypeHierarchyItem
     public JsonNode? data { get; set; }
 }
 
-public class PrepareTypeHierarchyResult : IJson
-{
-    public List<TypeHierarchyItem> items = new();
-    public void ReadFrom(JsonNode node)
-    {
-        items = node.ConvertTo<List<TypeHierarchyItem>>();
-    }
-
-    public JsonNode ToJsonNode()
-    {
-        return items.ToJsonNode();
-    }
-}
-
-public class RpcPrepareTypeHierarchy : JsonRpcBase<CallHierarchyPrepareParams, PrepareTypeHierarchyResult>
+public class RpcPrepareTypeHierarchy : JsonRpcBase<CallHierarchyPrepareParams, List<TypeHierarchyItem>>
 {
     public override string m_method => "textDocument/prepareTypeHierarchy";
 

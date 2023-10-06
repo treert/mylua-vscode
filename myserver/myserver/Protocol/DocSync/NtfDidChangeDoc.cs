@@ -1,4 +1,4 @@
-﻿using MyServer.JsonRpc;
+﻿
 using MyServer.Misc;
 using System;
 using System.Collections.Generic;
@@ -18,24 +18,10 @@ public class TextDocContentChangeEvent
     public Range? range { get; set; }
 }
 
-public class DidChangeDocParams : IJson
+public class DidChangeDocParams
 {
-    public VersionedTextDocId doc_vid;
-    public List<TextDocContentChangeEvent> changes;
-
-    public void ReadFrom(JsonNode node)
-    {
-        JsonNode node_doc_id = node["textDocument"]!;
-        doc_vid = node_doc_id.ConvertTo<VersionedTextDocId>()!;
-
-        JsonArray arr = node["contentChanges"]!.AsArray();
-        changes = arr!.ConvertTo<List<TextDocContentChangeEvent>>();
-    }
-
-    public JsonNode ToJsonNode()
-    {
-        throw new NotImplementedException();
-    }
+    public VersionedTextDocId textDocument { get; set; }
+    public List<TextDocContentChangeEvent> contentChanges { get; set; }
 }
 
 public class NtfDidChangeDoc : JsonNtfBase<DidChangeDocParams>

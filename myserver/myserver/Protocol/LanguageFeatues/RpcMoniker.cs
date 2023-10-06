@@ -85,7 +85,7 @@ public class Moniker
 }
 
 [MyProto(Direction = ProtoDirection.ToServer)]
-public class RpcMoniker : JsonRpcBase<OneJson<MonikerArgs>, ArrayJson<Moniker[]>>
+public class RpcMoniker : JsonRpcBase<MonikerArgs, List<Moniker[]>>
 {
     public override string m_method => "textDocument/moniker";
 

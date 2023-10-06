@@ -1,4 +1,4 @@
-﻿using MyServer.JsonRpc;
+﻿
 using MyServer.Misc;
 using System;
 using System.Collections.Generic;
@@ -19,36 +19,10 @@ public class ReferenceContext
 
 public class FindReferenceParams : PosAndTokenParams
 {
-    public ReferenceContext context = new ReferenceContext();
-    public override void ReadFrom(JsonNode node)
-    {
-        base.ReadFrom(node);
-        context = node["context"]!.ConvertTo<ReferenceContext>();
-    }
-
-    public override JsonNode ToJsonNode()
-    {
-        var data = base.ToJsonNode().AsObject();
-        data.AddKeyValue("context", context);
-        return data;
-    }
+    public ReferenceContext context { get; set; } = new ReferenceContext();
 }
 
-public class FindReferenceResult : IJson
-{
-    public List<Location> locations = new List<Location>();
-    public void ReadFrom(JsonNode node)
-    {
-        locations = node.ConvertTo<List<Location>>();
-    }
-
-    public JsonNode ToJsonNode()
-    {
-        return locations.ToJsonNode();
-    }
-}
-
-public class RpcFindReference : JsonRpcBase<FindReferenceParams, FindReferenceResult>
+public class RpcFindReference : JsonRpcBase<FindReferenceParams, List<Location>>
 {
     public override string m_method => "textDocument/references";
 
