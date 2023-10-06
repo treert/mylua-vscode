@@ -11,21 +11,6 @@ using System.Threading.Tasks;
 namespace MyServer.Protocol.LanguageFeatues;
 
 
-[JsonConverter(typeof(MyJsonEnumConverter))]
-public enum MarkupKind
-{
-    PlainText,
-    Markdown,
-}
-
-public class MarkupContent
-{
-    /// <summary>
-    /// MarkupKind : plaintext | markdown
-    /// </summary>
-    public MarkupKind kind {  get; set; }
-    public string value { get; set; }
-}
 
 public class HoverResult : IJson
 {

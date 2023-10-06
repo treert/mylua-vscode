@@ -71,7 +71,7 @@ namespace MyServer.Misc
             var enumType = Nullable.GetUnderlyingType(typeToConvert) ?? typeToConvert;
             if (reader.TokenType == JsonTokenType.String)
             {
-                string str = reader.GetString()!;
+                string str = reader.GetString()!.Replace("-","");
                 // 如果遇到不认识的，当成 -1 处理好了。
                 var ok = Enum.TryParse(enumType, str, true, out var result);
                 if (ok)

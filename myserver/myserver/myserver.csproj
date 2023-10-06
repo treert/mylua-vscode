@@ -7,6 +7,7 @@
     <Nullable>enable</Nullable>
     <AllowUnsafeBlocks>True</AllowUnsafeBlocks>
     <RootNamespace>MyServer</RootNamespace>
+    <LangVersion>preview</LangVersion>
   </PropertyGroup>
 
   <ItemGroup>
@@ -30,6 +31,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Folder Include="Protocol\WorkspaceFeatures\" />
     <Folder Include="Protocol\NoteBookSync\" />
   </ItemGroup>
 

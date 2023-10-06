@@ -1,6 +1,5 @@
 ﻿using MyServer.Misc;
 using MyServer.Protocol.BaseStruct;
-using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
@@ -10,7 +9,7 @@ using System.Runtime.Intrinsics.X86;
 using System.Text;
 using System.Text.Json.Nodes;
 using System.Threading.Tasks;
-using static System.Net.Mime.MediaTypeNames;
+using Range = MyServer.Protocol.BaseStruct.Range;
 
 namespace MyServer.Protocol.LanguageFeatues;
 

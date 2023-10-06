@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace MyServer.Protocol.BaseStruct;
+namespace MyServer.Protocol;
 public enum SemanticTokenTypes
 {
     Namespace,

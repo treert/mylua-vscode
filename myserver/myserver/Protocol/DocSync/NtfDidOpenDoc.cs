@@ -10,21 +10,12 @@ using System.Threading.Tasks;
 
 namespace MyServer.Protocol;
 
-public class DidOpenDocParams : IJson
+public class DidOpenDocParams
 {
-    public TextDocItem textDoc;
-    public void ReadFrom(JsonNode node)
-    {
-        textDoc = node.ConvertTo<TextDocItem>()!;
-    }
-
-    public JsonNode ToJsonNode()
-    {
-        return textDoc.ToJsonNode()!;
-    }
+    public TextDocItem textDocument { get; set; }
 }
 
-public class NtfDidOpenDoc : JsonNtfBase<DidOpenDocParams>
+public class NtfDidOpenDoc : JsonNtfBase<OneJson<DidOpenDocParams>>
 {
     public override string m_method => "textDocument/didOpen";
 

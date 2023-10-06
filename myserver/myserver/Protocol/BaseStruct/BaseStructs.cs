@@ -1,4 +1,4 @@
-global using ProgressToken = MyServer.Protocol.MyId;
+
 // lsp 里定义的一些 id: integer | string;
 using MyServer.JsonRpc;
 using MyServer.Misc;
@@ -156,39 +156,9 @@ public class TextDocPosition
     public Position? position { get; set; }
 }
 
-public class Location
-{
-    public Uri uri { get; set; }
-    public Range range { get; set; }
-}
 
-public class LocationLink
-{
-    /// <summary>
-    /// Span of the origin of this link.
-    /// 
-    /// Used as the underlined span for mouse interaction. Defaults to the word
-    /// range at the mouse position.
-    /// </summary>
-    public Range? originSelectionRange { get; set; }
-    /// <summary>
-    /// The target resource identifier of this link.
-    /// </summary>
-    public Uri targetUri { get; set; }
-    /// <summary>
-    /// The full target range of this link. If the target for example is a symbol
-    /// then target range is the range enclosing this symbol not including
-    /// leading/trailing whitespace but everything else like comments. This
-    /// information is typically used to highlight the range in the editor.
-    /// </summary>
-    public Range targetRange { get; set; }
-    /// <summary>
-    /// The range that should be selected and revealed when this link is being
-    /// followed, e.g the name of a function.Must be contained by the
-    /// `targetRange`. See also `DocumentSymbol#range`
-    /// </summary>
-    public Range targetSelectionRange { get; set; }
-}
+
+
 
 public class WorkDoneProgressParams
 {
@@ -207,30 +177,7 @@ public class WorkDoneProgressParams
     }
 }
 
-public class DocumentFilter
-{
-    public string? language { get; set; }
-    /// <summary>
-    /// A Uri [scheme](#Uri.scheme), like `file` or `untitled`.
-    /// </summary>
-    public string? scheme { get; set; }
-    /// <summary>
-    /// A glob pattern, like `*.{ts,js
-    /// 
-    /// Glob patterns can have the following syntax:
-    /// - `*` to match one or more characters in a path segment
-    /// - `?` to match on one character in a path segment
-    /// - `**` to match any number of path segments, including none
-    /// - `{}` to group sub patterns into an OR expression. (e.g. `**​/*.{ts,js}`
-    ///   matches all TypeScript and JavaScript files)
-    /// - `[]` to declare a range of characters to match in a path segment
-    ///   (e.g., `example.[0-9]` to match on `example.0`, `example.1`, …)
-    /// - `[!...]` to negate a range of characters to match in a path segment
-    ///   (e.g., `example.[!0-9]` to match on `example.a`, `example.b`, but
-    ///   not `example.0`)
-    /// </summary>
-    public string? pattern { get; set; }
-}
+
 
 public enum SymbolKind
 {
@@ -297,70 +244,10 @@ public class ResponseError : IJson
     }
 }
 
-public class TextDocItem
-{
-    public Uri uri { get; set; }
-    public string languageId { get; set; }
-    /// <summary>
-    /// it will increase after each change, including undo/redo
-    /// </summary>
-    public int version { get; set; }
-    public string text { get; set; }
-}
 
-public class TextDocId
-{
-    public Uri uri { get; set; }
-}
 
-public class VersionedTextDocId : TextDocId
-{
-    public int version { get; set; }
-}
 
-public class OptionalVersionedTextDocId : TextDocId
-{
-    public int? version { get; set; }
-}
 
-public class Position
-{
-    /// <summary>
-    /// Line position in a document (zero-based).
-    /// </summary>
-    public uint line {get;set; }
-
-    /// <summary>
-    /// Character offset on a line in a document(zero-based). The meaning of this
-    /// offset is determined by the negotiated `PositionEncodingKind`.
-    /// 
-    /// If the character value is greater than the line length it defaults back
-    /// to the line length.
-    /// </summary>
-    public uint character { get;set;}
-}
-
-public class Range
-{
-    public Position start { get; set; }
-    public Position end { get; set; }
-}
-
-public class TextEdit
-{
-    public Range range { get; set; }
-
-    /// <summary>
-    /// 替换的文本。delete 操作使用空串
-    /// </summary>
-    public string newText { get; set; }
-
-    /// <summary>
-    /// A special text edit with an additional change annotation.
-    /// @since 3.16.0.
-    /// </summary>
-    public string? annotationId { get; set; }
-}
 
 
 
@@ -392,21 +279,7 @@ public enum NotebookCellKind
     Code = 2,
 }
 
-public class Command
-{
-    /// <summary>
-    /// Title of the command, like `save`.
-    /// </summary>
-    public string title { get; set; }
-    /// <summary>
-    /// The identifier of the actual command handler.
-    /// </summary>
-    public string command { get; set; }
-    /// <summary>
-    /// Arguments that the command handler should be invoked with.
-    /// </summary>
-    public JsonArray? arguments { get; set; }
-}
+
 
 public class NotebookCell
 {
