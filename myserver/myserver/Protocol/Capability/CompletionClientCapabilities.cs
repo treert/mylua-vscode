@@ -42,13 +42,6 @@ public class CompletionItemCapabilities
     /// Client supports the preselect property on a completion item.
     /// </summary>
     public bool? preselectSupport { get; set; }
-    public class TagSupport
-    {
-        /// <summary>
-        /// The tags supported by the client.
-        /// </summary>
-        public CompletionItemTag[] valueSet { get; set; }
-    }
     /// <summary>
     /// Client supports the tag property on a completion item.
     /// Clients supporting tags have to handle unknown tags gracefully.
@@ -57,7 +50,7 @@ public class CompletionItemCapabilities
     /// <br/>
     /// @since 3.15.0
     /// </summary>
-    public TagSupport? tagSupport { get; set; }
+    public ValueSet<CompletionItemTag>? tagSupport { get; set; }
     /// <summary>
     /// Client supports insert replace edit to control different behavior if
     /// a completion item is inserted in the text or should replace text.
@@ -80,10 +73,6 @@ public class CompletionItemCapabilities
     /// @since 3.16.0
     /// </summary>
     public ResolveSupport? resolveSupport { get; set;}
-    public class InsertTextModeSupport
-    {
-        public InsertTextMode[] valueSet { get; set; }
-    }
     /// <summary>
     /// The client supports the `insertTextMode` property on
     /// a completion item to override the whitespace handling mode
@@ -91,7 +80,7 @@ public class CompletionItemCapabilities
     /// <br/>
     /// @since 3.16.0
     /// </summary>
-    public InsertTextModeSupport? insertTextModeSupport { get; set; }
+    public ValueSet<InsertTextMode>? insertTextModeSupport { get; set; }
     /// <summary>
     /// The client has support for completion item label
     /// details(see also `CompletionItemLabelDetails`).
@@ -111,21 +100,17 @@ public class CompletionClientCapabilities
     /// The client supports the following `CompletionItem` specific capabilities.
     /// </summary>
     public CompletionItemCapabilities? completionItem { get; set; }
-    public class _CompletionItemKind
-    {
-        /// <summary>
-        /// The completion item kind values the client supports.When this
-        /// property exists the client also guarantees that it will
-        /// handle values outside its set gracefully and falls back
-        /// to a default value when unknown.
-        /// <br/>
-        /// If this property is not present the client only supports
-        /// the completion items kinds from `Text` to `Reference` as defined in
-        /// the initial version of the protocol.
-        /// </summary>
-        public CompletionItemKind[] valueSet { get; set; }
-    }
-    public _CompletionItemKind? completionItemKind { get; set; }
+    /// <summary>
+    /// The completion item kind values the client supports.When this
+    /// property exists the client also guarantees that it will
+    /// handle values outside its set gracefully and falls back
+    /// to a default value when unknown.
+    /// <br/>
+    /// If this property is not present the client only supports
+    /// the completion items kinds from `Text` to `Reference` as defined in
+    /// the initial version of the protocol.
+    /// </summary>
+    public ValueSet<CompletionItemKind>? completionItemKind { get; set; }
     /// <summary>
     /// The client supports to send additional context information for a
     /// `textDocument/completion` request.

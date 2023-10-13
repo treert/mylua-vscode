@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Drawing;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -7,51 +8,63 @@ using System.Threading.Tasks;
 namespace MyServer.Protocol;
 public class ClientCapabilities
 {
-    public TextDocumentSyncClientCapabilities? synchronization {  get; set; }
-    /// <summary>
-    /// Capabilities specific to the `textDocument/completion` request.
-    /// </summary>
-    public CompletionClientCapabilities? completion { get; set; }
-    /// <summary>
-    /// Capabilities specific to the `textDocument/hover` request.
-    /// </summary>
-    public HoverClientCapabilities? hover {  get; set; }
-    /// <summary>
-    /// Capabilities specific to the `textDocument/signatureHelp` request.
-    /// </summary>
-    public SignatureHelpClientCapabilities? signatureHelp { get; set; }
-    /// <summary>
-    /// Capabilities specific to the `textDocument/declaration` request.
-    /// <br/>
-    /// @since 3.14.0
-    /// </summary>
-    public DeclarationClientCapabilities? declaration { get; set; }
-    /// <summary>
-    /// Capabilities specific to the `textDocument/definition` request.
-    /// </summary>
-    public DefinitionClientCapabilities? definition { get; set; }
-    /// <summary>
-    /// Capabilities specific to the `textDocument/typeDefinition` request.
-    /// <br/>
-    /// @since 3.6.0
-    /// </summary>
-    public TypeDefinitionClientCapabilities? typeDefinition { get; set; }
-    /// <summary>
-    /// Capabilities specific to the `textDocument/implementation` request.
-    /// <br/>
-    /// @since 3.6.0
-    /// </summary>
-    public ImplementationClientCapabilities? implementation { get; set; }
-    /// <summary>
-    /// Capabilities specific to the `textDocument/references` request.
-    /// </summary>
-    public ReferenceClientCapabilities? references { get; set; }
-    /// <summary>
-    /// Capabilities specific to the `textDocument/documentHighlight` request.
-    /// </summary>
-    public DocumentHighlightClientCapabilities? documentHighlight { get; set; }
-    /// <summary>
-    /// Capabilities specific to the `textDocument/documentSymbol` request.
-    /// </summary>
-    public DocumentSymbolClientCapabilities? documentSymbol { get; set; }
+    public class _Workspace
+    {
+        /// <summary>
+        /// The client supports applying batch edits to the workspace by supporting the request 'workspace/applyEdit'
+        /// </summary>
+        public bool? applyEdit { get; set; }
+        /// <summary>
+        /// Capabilities specific to `WorkspaceEdit`s
+        /// </summary>
+        public WorkspaceEditClientCapabilities? workspaceEdit { get; set; }
+        /// <summary>
+        /// Capabilities specific to the `workspace/didChangeConfiguration` notification.
+        /// </summary>
+        public DidChangeConfigurationClientCapabilities? didChangeConfiguration { get; set; }
+        /// <summary>
+        /// Capabilities specific to the `workspace/didChangeWatchedFiles` notification.
+        /// </summary>
+        public DidChangeWatchedFilesClientCapabilities? didChangeWatchedFiles { get; set; }
+        /// <summary>
+        /// Capabilities specific to the `workspace/symbol` notification.
+        /// </summary>
+        public WorkspaceSymbolClientCapabilities? symbol { get; set; }
+        /// <summary>
+        /// Capabilities specific to the `workspace/executeCommand` request.
+        /// </summary>
+        public ExecuteCommandClientCapabilities? executeCommand { get; set; }
+        /// <summary>
+        /// The client has support for workspace folders.
+        /// </summary>
+        public bool? workspaceFolders { get; set; }
+        /// <summary>
+        /// The client supports `workspace/configuration` requests.
+        /// </summary>
+        public bool? configuration { get; set; }
+        /// <summary>
+        /// Capabilities specific to the semantic token requests scoped to the workspace.
+        /// </summary>
+        public SemanticTokensWorkspaceClientCapabilities? semanticTokens { get; set; }
+        /// <summary>
+        /// Capabilities specific to the code lens requests scoped to the workspace.
+        /// </summary>
+        public CodeLensWorkspaceClientCapabilities? codeLens { get; set; }
+        public class _FileOperations
+        {
+            public bool? dynamicRegistration { get; set; }
+            public bool? didCreate { get; set; }
+            public bool? willCreate { get; set; }
+            public bool? didRename { get; set; }
+            public bool? willRename { get; set; }
+            public bool? didDelete { get; set; }
+            public bool? willDelete { get; set;}
+        }
+        /// <summary>
+        /// The client has support for file requests/notifications.
+        /// </summary>
+        public _FileOperations? fileOperations { get; set; }
+
+    }
 }
+

@@ -90,6 +90,10 @@ namespace MyServer.Misc
             if (reader.TokenType == JsonTokenType.String)
             {
                 string str = reader.GetString()!.Replace("-","");
+                if (string.IsNullOrEmpty(str))
+                {
+                    return Enum.ToObject(enumType, -1);
+                }
                 // 如果遇到不认识的，当成 -1 处理好了。
                 var ok = Enum.TryParse(enumType, str, true, out var result);
                 if (ok)

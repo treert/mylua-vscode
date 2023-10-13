@@ -1,18 +1,4 @@
-﻿using NLog.Layouts;
-using System;
-using System.Collections;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Linq;
-using System.Net.NetworkInformation;
-using System.Reflection.Metadata;
-using System.Security.Cryptography;
-using System.Text;
-using System.Threading.Channels;
-using System.Threading.Tasks;
-using static System.Runtime.InteropServices.JavaScript.JSType;
-
-namespace MyServer.Protocol
+﻿namespace MyServer.Protocol
 {
     /// <summary>
     /// Well-known LSP error codes.
