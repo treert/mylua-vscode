@@ -22,4 +22,22 @@ public class ServerCapabilities
     /// @since 3.17.0
     /// </summary>
     public PositionEncodingKind positionEncoding { get; set; } = PositionEncodingKind.UTF16;
+    /// <summary>
+    /// Defines how text documents are synced.
+    /// </summary>
+    public TextDocumentSyncOptions textDocumentSync { get; set; } = new TextDocumentSyncOptions();
+    /// <summary>
+    /// Defines how notebook documents are synced.
+    /// </summary>
+    public NotebookDocumentSyncOptions? notebookDocumentSync { get; set; }
+    /// <summary>
+    /// The server provides completion support.
+    /// </summary>
+    public CompletionOptions? completionProvider { get; set; }
+    /// <summary>
+    /// The server provides hover support.
+    /// </summary>
+    public HoverOptions? hoverProvider { get; set; }
+    public 
+
 }

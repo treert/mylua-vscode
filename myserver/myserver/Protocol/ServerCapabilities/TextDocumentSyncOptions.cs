@@ -54,5 +54,9 @@ public class TextDocumentSyncOptions
     /// If omitted the request should not be sent.
     /// </summary>
     public bool willSaveWaitUntil { get; set; } = true;
-    public 
+    /// <summary>
+    /// If present save notifications are sent to the server.
+    /// If omitted the notification should not be sent.
+    /// </summary>
+    public SaveOptions save { get; set; } = new SaveOptions();
 }

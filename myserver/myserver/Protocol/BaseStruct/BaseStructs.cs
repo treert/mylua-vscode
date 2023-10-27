@@ -289,97 +289,31 @@ public class NotebookDoc
     public JsonObject? metadata { get; set; }
 }
 
-[JsonConverter(typeof(NotebookDocumentFilterConverter))]
+/// <summary>
+/// A notebook document filter denotes a notebook document by different properties.
+/// </summary>
 public class NotebookDocumentFilter
 {
-    public string? notebookType { get; set;}
-    public string? scheme { get; set; }
-    public string? pattern { get; set; }
     /// <summary>
-    /// 兼容处理下。 lsp 里定义成了 string | NotebookDocumentFilter
+    /// e.g. jupyter-notebook
     /// </summary>
-    public string? type_pattern { get; set; }
-
-
-    public bool IsValid()
-    {
-        return type_pattern != null || scheme != null || pattern != null || notebookType != null;
-    }
+    public string? notebookType { get; set;}
+    /// <summary>
+    /// e.g. file
+    /// </summary>
+    public string? scheme { get; set; }
+    /// <summary>
+    /// e.g. **/books1/**
+    /// </summary>
+    public string? pattern { get; set; }
 }
 
-public class NotebookDocumentFilterConverter : JsonConverter<NotebookDocumentFilter>
-{
-    //public override bool HandleNull => true;
-    public override NotebookDocumentFilter? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
-    {
-        NotebookDocumentFilter ret = new NotebookDocumentFilter();
-        switch (reader.TokenType)
-        {
-            case JsonTokenType.String:
-                ret.type_pattern = reader.GetString();
-                break;
-            case JsonTokenType.StartObject:
-                while (reader.Read())
-                {
-                    if (reader.TokenType == JsonTokenType.EndObject)
-                    {
-                        break;
-                    }
-                    if (reader.TokenType == JsonTokenType.PropertyName)
-                    {
-                        var propertyName = reader.GetString();
-                        reader.Read();
-                        switch (propertyName)
-                        {
-                            case "notebookType":
-                                ret.notebookType = reader.GetString();
-                                break;
-                            case "scheme":
-                                ret.scheme = reader.GetString();
-                                break;
-                            case "pattern":
-                                ret.pattern = reader.GetString();
-                                break;
-                        }
-                    }
-                }
-                break;
-        }
-        if (ret.IsValid())
-        {
-            return ret;
-        }
-        throw new Exception();
-    }
-
-    public override void Write(Utf8JsonWriter writer, NotebookDocumentFilter value, JsonSerializerOptions options)
-    {
-        if (value.type_pattern == null)
-        {
-            writer.WriteStartObject();
-            if (value.notebookType == null)
-            {
-                writer.WriteString("notebookType", value.notebookType);
-            }
-            if (value.scheme == null)
-            {
-                writer.WriteString("scheme", value.scheme);
-            }
-            if (value.pattern == null)
-            {
-                writer.WriteString("pattern", value.pattern);
-            }
-            writer.WriteEndObject();
-        }
-        else
-        {
-            writer.WriteStringValue(value.type_pattern);
-        }
-    }
-}
-
+/// <summary>
+/// A notebook cell text document filter denotes a cell text document by different properties.
+/// </summary>
 public class NotebookCellTextDocumentFilter
 {
+
     public NotebookDocumentFilter notebook { get; set; }
     public string? language { get; set; }
 }
