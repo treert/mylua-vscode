@@ -80,7 +80,7 @@ namespace MyServer.Protocol
         /// <summary>
         /// The capabilities the language server provides.
         /// </summary>
-        public JsonObject capabilities { get; set; }
+        public ServerCapabilities capabilities { get; set; }
         /// <summary>
         /// Information about the server.
         /// </summary>

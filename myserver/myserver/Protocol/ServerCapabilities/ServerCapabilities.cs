@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Text.Json.Nodes;
 using System.Threading.Tasks;
 using static System.Collections.Specialized.BitVector32;
 
@@ -72,4 +73,58 @@ public class ServerCapabilities
     public DocumentLinkOptions? documentLinkProvider { get; set; }
     public bool? colorProvider { get; set; }
     public bool? documentFormattingProvider { get; set; }
+    public bool? documentRangeFormattingProvider { get; set; }
+    public DocumentOnTypeFormattingOptions? documentOnTypeFormattingProvider { get; set; }
+    /// <summary>
+    /// The server provides rename support. RenameOptions may only be
+    /// specified if the client states that it supports
+    /// `prepareSupport` in its initial `initialize` request.
+    /// </summary>
+    public RenameOptions? renameProvider { get; set; }
+    public bool? foldingRangeProvider { get; set; }
+    public ExecuteCommandOptions? executeCommandProvider { get; set; }
+    public bool? selectionRangeProvider { get; set; }
+    public bool? linkedEditingRangeProvider { get; set; }
+    public bool? callHierarchyProvider { get; set; }
+    public SemanticTokensOptions? semanticTokensProvider { get; set; }
+    public bool? monikerProvider { get; set; }
+    public bool? typeHierarchyProvider { get; set; }
+    public bool? inlineValueProvider { get; set; }
+    public InlayHintOptions? inlayHintProvider { get; set; }
+    /// <summary>
+    /// The server has support for pull model diagnostics.
+    /// </summary>
+    public DiagnosticOptions? diagnosticProvider { get; set; }
+    public WorkspaceSymbolOptions? workspaceSymbolProvider { get; set; }
+    public class _Workspace
+    {
+        /// <summary>
+        /// The server supports workspace folder.
+        /// </summary>
+        public WorkspaceFoldersServerCapabilities? workspaceFolders { get; set; }
+        public class _FileOperations
+        {
+            /// <summary>
+            /// The server is interested in receiving didCreateFiles notifications.
+            /// </summary>
+            public FileOperationRegistrationOptions? didCreate {  get; set; }
+            public FileOperationRegistrationOptions? willCreate { get; set; }
+            public FileOperationRegistrationOptions? didRename { get; set; }
+            public FileOperationRegistrationOptions? willRename { get; set; }
+            public FileOperationRegistrationOptions? didDelete { get; set; }
+            public FileOperationRegistrationOptions? willDelete { get; set; }
+        }
+        /// <summary>
+        /// The server is interested in file notifications/requests.
+        /// </summary>
+        public _FileOperations? fileOperations { get; set; }
+    }
+    /// <summary>
+    /// Workspace specific server capabilities
+    /// </summary>
+    public _Workspace? workspace { get; set; }
+    /// <summary>
+    /// Experimental server capabilities.
+    /// </summary>
+    public JsonNode? experimental {  get; set; }
 }

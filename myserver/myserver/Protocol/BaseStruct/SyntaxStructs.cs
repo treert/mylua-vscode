@@ -3,9 +3,12 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 
 namespace MyServer.Protocol;
+
+[JsonConverter(typeof(MyJsonEnumConverter))]
 public enum SemanticTokenTypes
 {
     Namespace,
@@ -39,6 +42,7 @@ public enum SemanticTokenTypes
     Decorator,
 }
 
+[JsonConverter(typeof(MyJsonEnumConverter))]
 public enum SemanticTokenModifiers
 {
     Declaration,
@@ -61,6 +65,12 @@ public enum TokenFormat
 
 public class SemanticTokensLegend
 {
+    /// <summary>
+    /// The token types a server uses.
+    /// </summary>
     public SemanticTokenTypes[] tokenTypes {  get; set; }
+    /// <summary>
+    /// The token modifiers a server uses.
+    /// </summary>
     public SemanticTokenModifiers[] tokenModifiers { get; set; }
 }
