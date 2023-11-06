@@ -6,6 +6,11 @@ using System.Text.Json.Nodes;
 using System.Threading.Tasks;
 using static System.Collections.Specialized.BitVector32;
 
+/*
+readme@xx
+
+*/
+
 namespace MyServer.Protocol;
 /// <summary>
 /// 服务器提供的权限。这儿的结构定义可以变通来着
@@ -66,7 +71,7 @@ public class ServerCapabilities
     /// <summary>
     /// The server provides code actions. The `CodeActionOptions` return type is
     /// only valid if the client signals code action literal support via the
-    /// property `textDocument.codeAction.codeActionLiteralSupport`.
+    /// property `textDocument.codeAction.codeActionLiteralSupport`. ioo
     /// </summary>
     public CodeActionOptions? codeActionProvider { get; set; }
     public CodeLensOptions? codeLensProvider { get; set; }

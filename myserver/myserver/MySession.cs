@@ -23,7 +23,9 @@ namespace myserver
             {
                 MySession.Instance.Start(inputStream, outputStream).Wait();
             }
-            catch { }
+            catch {
+                throw;
+            }
 
         }
         public static void RunServer(int port)

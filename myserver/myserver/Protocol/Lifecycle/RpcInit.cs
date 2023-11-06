@@ -68,7 +68,7 @@ namespace MyServer.Protocol
         /// <summary>
         /// The capabilities provided by the client (editor or tool)
         /// </summary>
-        public JsonObject capabilities { get; set; }
+        public ClientCapabilities capabilities { get; set; }
 
         public LspTrace? trace { get; set; }
 

@@ -8,10 +8,11 @@ using System.Text;
 using System.Threading.Tasks;
 using static System.Net.Mime.MediaTypeNames;
 using System.Xml.Linq;
+using System.Drawing;
 
 namespace MyServer.Protocol.BaseStruct;
 /// <summary>
-/// todo
+/// todo@later
 /// </summary>
 public class WorkspaceEdit
 {
@@ -32,5 +33,11 @@ public class WorkspaceEdit
     /// using the `changes` property are supported.
     /// </summary>
     public TextDocEdit[]? documentChanges { get; set; }
+    /// <summary>
+    /// A map of change annotations that can be referenced in `AnnotatedTextEdit`s
+    /// or create, rename and delete file / folder operations.
+    /// <br/>
+    /// Whether clients honor this property depends on the client capability `workspace.changeAnnotationSupport`.
+    /// </summary>
     public Dictionary<string, ChangeAnnotation> changeAnnotations { get; set; }
 }

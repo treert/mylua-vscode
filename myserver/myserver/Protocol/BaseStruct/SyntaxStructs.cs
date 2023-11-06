@@ -58,6 +58,7 @@ public enum SemanticTokenModifiers
     DefaultLibrary,
 }
 
+[JsonConverter(typeof(MyJsonEnumConverter))]
 public enum TokenFormat
 {
     Relative,
