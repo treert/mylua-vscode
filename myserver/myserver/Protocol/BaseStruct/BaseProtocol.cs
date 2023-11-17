@@ -10,7 +10,13 @@ namespace MyServer.Protocol;
 
 public enum ProtoDirection
 {
+    /// <summary>
+    /// 客户端发送给服务器
+    /// </summary>
     ToServer,
+    /// <summary>
+    /// 服务器发送给客户端
+    /// </summary>
     ToClient,
 }
 

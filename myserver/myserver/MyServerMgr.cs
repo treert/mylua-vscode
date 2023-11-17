@@ -1,4 +1,5 @@
 ﻿using myserver;
+using MyServer.Misc;
 using MyServer.Protocol;
 using System;
 using System.Collections.Generic;
@@ -9,6 +10,9 @@ using System.Threading.Tasks;
 
 namespace MyServer
 {
+    /// <summary>
+    /// MyLua Lsp 实例
+    /// </summary>
     public class MyServerMgr
     {
         public static MyServerMgr Instance { get; private set; } = new MyServerMgr();
@@ -27,6 +31,15 @@ namespace MyServer
 
         public void StartInit(InitRpc rpc)
         {
+            if(rpc.m_req!.workspaceFolders.Count > 0) {
+                var fold = rpc.m_req.workspaceFolders[0];
+                if (fold.uri.IsFile)
+                {
+                    var LocaPath = fold.uri.LocalPath.TrimStart('/');
+                    var files = Directory.GetFiles(LocaPath);
+                    NtfShowMessage.ShowMessage(files.ToJsonStr());
+                }
+            }
             rpc.m_err = new ResponseError();
             rpc.m_err.code = ErrorCodes.InternalError;
             var err_data = new JsonObject()

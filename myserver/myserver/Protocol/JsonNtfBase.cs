@@ -9,7 +9,7 @@ public abstract class JsonNtfBase
     public abstract string m_method { get; }
     public virtual void OnNotifyParseArgs(JsonNode? args) { }
     /// <summary>
-    /// 子类需要实现
+    /// 子类需要实现。ToClient 类型的实现个空的。
     /// </summary>
     public abstract void OnNotify();
     /// <summary>
@@ -23,17 +23,24 @@ public abstract class JsonNtfBase
     }
 }
 
-public abstract class JsonNtfBase<TArgs> : JsonNtfBase where TArgs : class
+public abstract class JsonNtfBase<TArgs> : JsonNtfBase where TArgs : class,new()
 {
     public TArgs? m_args;
-    public TArgs Args { get { return m_args!; } }
+    public TArgs Args { get {
+            if (m_args == null)
+            {
+                m_args = new TArgs();
+            }
+            return m_args;
+        }
+    }
 
     public override sealed void OnNotifyParseArgs(JsonNode? args)
     {
         m_args = args?.ConvertTo<TArgs>();
     }
 
-    public override sealed void SendNotify()
+    public override void SendNotify()
     {
         JsonObject data = new();
         data["method"] = m_method;

@@ -72,7 +72,7 @@ namespace MyServer.Protocol
 
         public LspTrace? trace { get; set; }
 
-        public List<WorkspaceFolder>? workspaceFolders { get; set; }
+        public List<WorkspaceFolder> workspaceFolders { get; set; } = new();
     }
 
     public class InitResult
