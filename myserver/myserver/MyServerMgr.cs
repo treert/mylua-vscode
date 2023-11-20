@@ -40,14 +40,23 @@ namespace MyServer
                     NtfShowMessage.ShowMessage(files.ToJsonStr());
                 }
             }
-            rpc.m_err = new ResponseError();
-            rpc.m_err.code = ErrorCodes.InternalError;
-            var err_data = new JsonObject()
+            
+            rpc.m_res = new InitResult()
             {
-                { "retry",true },
+                serverInfo = new ServerInfo() { name = "mylua", version = ""},
+                capabilities = new ServerCapabilities() {
+                    positionEncoding = PositionEncodingKind.UTF16,
+                    textDocumentSync = new TextDocumentSyncOptions() { },
+                },
             };
-            rpc.m_err.data = err_data;
-            rpc.m_err.message = "debug init error";
+            //rpc.m_err = new ResponseError();
+            //rpc.m_err.code = ErrorCodes.InternalError;
+            //var err_data = new JsonObject()
+            //{
+            //    { "retry",true },
+            //};
+            //rpc.m_err.data = err_data;
+            //rpc.m_err.message = "debug init error";
             rpc.SendResponse();
         }
 

@@ -12,6 +12,7 @@ namespace MyServer.Misc
         {
             public const string Init = "initialize";
             public const string Exit = "exit";
+            public const string Initialized = "initialized";
         }
     }
 }

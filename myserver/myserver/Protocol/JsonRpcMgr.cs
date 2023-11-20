@@ -152,10 +152,10 @@ namespace MyServer.Protocol
                 MyServerMgr.Instance.ExitApp();
                 return;// 优先级最高
             }
-            if (!MyServerMgr.Instance.IsInited)
-            {
-                return;// 为初始化前，忽视所有的ntf
-            }
+            //if (!MyServerMgr.Instance.IsInited)
+            //{
+            //    return;// 为初始化前，忽视所有的ntf
+            //}
             if (m_notify_type_map.TryGetValue(method, out var tt))
             {
                 JsonNtfBase? notify = Activator.CreateInstance(tt) as JsonNtfBase;

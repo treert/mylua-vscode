@@ -28,11 +28,11 @@ public class ServerCapabilities
     /// <br/>
     /// @since 3.17.0
     /// </summary>
-    public PositionEncodingKind positionEncoding { get; set; } = PositionEncodingKind.UTF16;
+    public PositionEncodingKind? positionEncoding { get; set; }
     /// <summary>
     /// Defines how text documents are synced.
     /// </summary>
-    public TextDocumentSyncOptions textDocumentSync { get; set; } = new TextDocumentSyncOptions();
+    public TextDocumentSyncOptions? textDocumentSync { get; set; }
     /// <summary>
     /// Defines how notebook documents are synced.
     /// </summary>

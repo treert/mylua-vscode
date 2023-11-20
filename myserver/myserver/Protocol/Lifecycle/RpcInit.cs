@@ -84,7 +84,7 @@ namespace MyServer.Protocol
         /// <summary>
         /// Information about the server.
         /// </summary>
-        public ServerInfo? serverInfo { get; set; }
+        public ServerInfo serverInfo { get; set; }
     }
 
     [MyProto(Direction = ProtoDirection.ToServer)]
