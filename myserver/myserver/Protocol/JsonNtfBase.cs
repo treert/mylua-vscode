@@ -44,7 +44,7 @@ public abstract class JsonNtfBase<TArgs> : JsonNtfBase where TArgs : class,new()
         m_args = args?.ConvertTo<TArgs>();
     }
 
-    public override void SendNotify()
+    public override sealed void SendNotify()
     {
         My.Logger.Debug($"SendNotify {m_method}");
         JsonObject data = new();

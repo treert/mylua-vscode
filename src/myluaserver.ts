@@ -113,7 +113,8 @@ class MyLuaClient {
         let client = this.client;
         let bar = window.createStatusBarItem(vscode.StatusBarAlignment.Left);
         bar.text = 'mylua';
-        bar.command = 'mylua.helloWorld';
+        bar.tooltip = 'lsp';
+        bar.command = 'mylua.status.click';
         this.disposables.push(Commands.registerCommand(bar.command, () => {
             client.sendNotification('$/status/click');
         }));
@@ -133,7 +134,7 @@ class MyLuaClient {
 
     onCommand() {
         this.disposables.push(this.client.onNotification('$/command', (params) => {
-            Commands.executeCommand(params.command, params.data);
+            Commands.executeCommand(params.command, params.args);
         }));
     }
 }

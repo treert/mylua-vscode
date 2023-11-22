@@ -93,7 +93,15 @@ namespace myserver
             _stopRequested = false;
             while (!_stopRequested)
             {
-                var read = await inputStream.ReadAsync(buffer, 0, buffer.Length);
+                int read = 0;
+                try
+                {
+                    read = await inputStream.ReadAsync(buffer, 0, buffer.Length);
+                }
+                catch (IOException)
+                {
+                    break;// 网络异常嘛
+                }
 
                 if (read == 0)
                 {

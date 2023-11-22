@@ -120,15 +120,16 @@ namespace MyServer.Protocol
 
         public override sealed void SendResponse()
         {
-            My.Logger.Debug($"SendResponse id={m_id} {m_method}");
             var data = new JsonObject();
             data["id"] = m_id.ToJsonNode();
             if (m_err != null)
             {
+                My.Logger.Debug($"rpc.SendResponse id={m_id} {m_method}-Error");
                 data["error"] = m_err.ToJsonNode();
             }
             else
             {
+                My.Logger.Debug($"rpc.SendResponse id={m_id} {m_method}");
                 data["result"] = m_res?.ToJsonNode();
             }
             JsonRpcMgr.Instance.SendResponseOrError(this, data);
@@ -136,7 +137,7 @@ namespace MyServer.Protocol
 
         public override sealed void SendRequest()
         {
-            My.Logger.Debug($"SendRequest id={m_id} {m_method}");
+            My.Logger.Debug($"rpc.SendRequest id={m_id} {m_method}");
             var data = new JsonObject();
             m_id = MyId.NewId();
             data["id"] = m_id.ToJsonNode();
@@ -150,7 +151,7 @@ namespace MyServer.Protocol
 
         public override sealed void SendCancel()
         {
-            My.Logger.Debug($"SendCancel id={m_id} {m_method}");
+            My.Logger.Debug($"rpc.SendCancel id={m_id} {m_method}");
             NtfCancelRequest ntf = new NtfCancelRequest();
             ntf.m_args = new CancelParams()
             {
@@ -163,23 +164,27 @@ namespace MyServer.Protocol
         {
             if (error != null)
             {
+                My.Logger.Debug($"rpc.OnGetResponse id={m_id} {m_method}-Error");
                 m_err = error;
             }
             else
             {
+                My.Logger.Debug($"rpc.OnGetResponse id={m_id} {m_method}");
                 m_res = result?.ConvertTo<TRes>();
             }
         }
 
         public override sealed void OnResponse()
         {
-            My.Logger.Debug($"OnResponse id={m_id} {m_method}");
+            
             if (m_err != null)
             {
+                My.Logger.Debug($"rpc.OnResponse id={m_id} {m_method}-Error");
                 OnError();
             }
             else
             {
+                My.Logger.Debug($"rpc.OnResponse id={m_id} {m_method}-Error");
                 OnSuccess();
             }
         }

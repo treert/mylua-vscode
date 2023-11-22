@@ -107,6 +107,7 @@ namespace MyServer.Protocol
         /// <param name="args"></param>
         private void OnGetRequest(MyId id, string method, JsonNode? args)
         {
+            My.Logger.Debug($"rpc.OnGetRequest id={id} {method}");
             if (!MyServerMgr.Instance.IsInited && method != MyConst.Method.Init)
             {
                 SendErrorForRPC(id, ErrorCodes.ServerNotInitialized, "server has not initialized");
@@ -123,7 +124,7 @@ namespace MyServer.Protocol
             }
             else
             {
-                My.Logger.Error($"client req not support. method={method} args={args}");
+                My.Logger.Error($"method not support. OnGetRequest method={method}");
             }
         }
 
@@ -180,7 +181,7 @@ namespace MyServer.Protocol
         {
             if (m_client_rpc_doing is null && m_client_rpc_list.TryDequeue(out m_client_rpc_doing))
             {
-                My.Logger.Debug($"OnRequest id={m_client_rpc_doing.m_id} {m_client_rpc_doing.m_method}");
+                My.Logger.Debug($"rpc.OnRequest id={m_client_rpc_doing.m_id} {m_client_rpc_doing.m_method}");
                 m_client_rpc_doing.OnRequest();
             }
         }
@@ -198,6 +199,7 @@ namespace MyServer.Protocol
         {
             if(m_client_rpc_doing is not null && m_client_rpc_doing.m_id == id)
             {
+                My.Logger.Debug($"rpc.CancelRequest id={id} {m_client_rpc_doing.m_method}");
                 m_client_rpc_doing.OnCanceled();
             }
             else
@@ -212,6 +214,7 @@ namespace MyServer.Protocol
                     }
                     else
                     {
+                        My.Logger.Debug($"rpc.CancelRequest id={id} {item.m_method} NotStartYet");
                         // 直接丢弃，反正还没开始工作。
                     }
                 }

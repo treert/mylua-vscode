@@ -9,15 +9,9 @@ using System.Threading.Tasks;
 namespace MyServer.Protocol;
 
 [MyProto(Direction = ProtoDirection.ToClient)]
-public class NtfTelemetry : JsonNtfBase<Dummy>
+public class NtfTelemetry : JsonNtfBase
 {
     public override string m_method => "telemetry/event";
-
-    public override void SendNotify()
-    {
-        // todo
-        base.SendNotify();
-    }
 
     public override void OnNotify()
     {
