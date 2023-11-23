@@ -19,12 +19,16 @@ public class RpcWillSaveWaitUntil : JsonRpcBase<WillSaveTextDocParams, List<Text
 
     public override void OnCanceled()
     {
-        // todo
+        // nothing now
+        m_res = null;
+        SendResponse();
     }
 
     public override void OnRequest()
     {
-        // todo
+        // nothing now
+        m_res = null;
+        SendResponse();
     }
 
     protected override void OnSuccess()

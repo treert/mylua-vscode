@@ -26,7 +26,8 @@ public class StatusBarMgr
     public void OnClick()
     {
         count++;
-        NtfShowMessage.ShowMessage("you clicked status bar "+count.ToString());
+        //NtfShowMessage.ShowMessage("you clicked status bar "+count.ToString());
+        Report("mylua="+count.ToString());
     }
     public void Report(string text, string? tooltip = null)
     {
