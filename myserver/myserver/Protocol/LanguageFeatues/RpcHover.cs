@@ -23,11 +23,6 @@ public class RpcHover : JsonRpcBase<PosAndTokenParams, HoverResult>
 {
     public override string m_method => "textDocument/hover";
 
-    public override void OnCanceled()
-    {
-       // todo
-    }
-
     public override void OnRequest()
     {
         // todo

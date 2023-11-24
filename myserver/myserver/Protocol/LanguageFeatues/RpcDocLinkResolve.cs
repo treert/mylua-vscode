@@ -13,11 +13,6 @@ public class RpcDocLinkResolve : JsonRpcBase<DocumentLink, DocumentLink>
 {
     public override string m_method => "documentLink/resolve";
 
-    public override void OnCanceled()
-    {
-        // todo
-    }
-
     public override void OnRequest()
     {
         // todo

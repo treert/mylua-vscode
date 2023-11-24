@@ -51,11 +51,6 @@ public class RpcInlineValue : JsonRpcBase<InlineValueParams, InlineValue>
 {
     public override string m_method => "textDocument/inlineValue";
 
-    public override void OnCanceled()
-    {
-        throw new NotImplementedException();
-    }
-
     public override void OnRequest()
     {
         throw new NotImplementedException();
@@ -71,11 +66,6 @@ public class RpcInlineValue : JsonRpcBase<InlineValueParams, InlineValue>
 public class RpcInlineValueRefresh : JsonRpcEmptyBase
 {
     public override string m_method => "workspace/inlineValue/refresh";
-
-    public override void OnCanceled()
-    {
-        throw new NotImplementedException();
-    }
 
     public override void OnRequest()
     {

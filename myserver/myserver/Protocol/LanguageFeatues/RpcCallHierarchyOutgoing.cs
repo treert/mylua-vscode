@@ -26,11 +26,6 @@ public class RpcCallHierarchyOutgoing : JsonRpcBase<CallHierarchyIncomingParams,
 {
     public override string m_method => "callHierarchy/outgoingCalls";
 
-    public override void OnCanceled()
-    {
-        // todo
-    }
-
     public override void OnRequest()
     {
         // todo

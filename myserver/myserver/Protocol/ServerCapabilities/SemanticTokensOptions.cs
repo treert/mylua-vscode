@@ -10,20 +10,20 @@ public class SemanticTokensOptions : WorkDoneProgressOptions
     /// <summary>
     /// The legend used by the server
     /// </summary>
-    public SemanticTokensLegend legend { get; set; }
+    public SemanticTokensLegend legend { get; set; } = new SemanticTokensLegend();
     /// <summary>
     /// Server supports providing semantic tokens for a specific range of a document.
     /// </summary>
-    public bool? range { get; set; }
+    public bool? range { get; set; } = true;
     public class _Full
     {
         /// <summary>
         /// The server supports deltas for full documents.
         /// </summary>
-        public bool? delta { get; set; }
+        public bool? delta { get; set; } = true;
     }
     /// <summary>
     /// Server supports providing semantic tokens for a full document.
     /// </summary>
-    public _Full? full { get; set; }
+    public _Full? full { get; set; } = new _Full();
 }

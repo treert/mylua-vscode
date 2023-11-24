@@ -173,11 +173,6 @@ public class RpcCompletion : JsonRpcBase<CompletionParams, List<CompletionItem>>
 {
     public override string m_method => "textDocument/completion";
 
-    public override void OnCanceled()
-    {
-        throw new NotImplementedException();
-    }
-
     public override void OnRequest()
     {
         throw new NotImplementedException();
@@ -193,11 +188,6 @@ public class RpcCompletion : JsonRpcBase<CompletionParams, List<CompletionItem>>
 public class RpcCompletionItemResolve : JsonRpcBase<CompletionItem, CompletionItem>
 {
     public override string m_method => "completionItem/resolve";
-
-    public override void OnCanceled()
-    {
-        throw new NotImplementedException();
-    }
 
     public override void OnRequest()
     {

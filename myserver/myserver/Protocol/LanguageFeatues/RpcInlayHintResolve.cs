@@ -12,11 +12,6 @@ public class RpcInlayHintResolve : JsonRpcBase<InlayHint, InlayHint>
 {
     public override string m_method => "inlayHint/resolve";
 
-    public override void OnCanceled()
-    {
-        throw new NotImplementedException();
-    }
-
     public override void OnRequest()
     {
         throw new NotImplementedException();

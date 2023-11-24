@@ -28,7 +28,7 @@ public class ServerCapabilities
     /// <br/>
     /// @since 3.17.0
     /// </summary>
-    public PositionEncodingKind? positionEncoding { get; set; }
+    public PositionEncodingKind positionEncoding { get; set; } = PositionEncodingKind.UTF16;
     /// <summary>
     /// Defines how text documents are synced.
     /// </summary>

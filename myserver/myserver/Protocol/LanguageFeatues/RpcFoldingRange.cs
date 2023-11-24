@@ -40,11 +40,6 @@ public class RpcFoldingRange : JsonRpcBase<DocIdAndTokenParams, List<FoldingRang
 {
     public override string m_method => "textDocument/foldingRange";
 
-    public override void OnCanceled()
-    {
-        // todo
-    }
-
     public override void OnRequest()
     {
         // todo

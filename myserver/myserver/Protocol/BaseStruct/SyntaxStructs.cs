@@ -8,7 +8,6 @@ using System.Threading.Tasks;
 
 namespace MyServer.Protocol;
 
-[JsonConverter(typeof(MyJsonEnumConverter))]
 public enum SemanticTokenTypes
 {
     Namespace,
@@ -42,20 +41,20 @@ public enum SemanticTokenTypes
     Decorator,
 }
 
-[JsonConverter(typeof(MyJsonEnumConverter))]
+[Flags]
 public enum SemanticTokenModifiers
 {
-    Declaration,
-    Definition,
-    Readonly,
-    Static,
-    Deprecated,
-    Abstract,
-    Async,
-    Modification,
-    Documentation,
+    Declaration = 1,
+    Definition = 1<<1,
+    Readonly = 1 << 2,
+    Static = 1 << 3,
+    Deprecated = 1 << 4,
+    Abstract = 1 << 5,
+    Async = 1 << 6,
+    Modification = 1 << 7,
+    Documentation = 1 << 8,
     [MyEnum(Name = "defaultLibrary")]
-    DefaultLibrary,
+    DefaultLibrary = 1 << 9,
 }
 
 [JsonConverter(typeof(MyJsonEnumConverter))]
@@ -69,9 +68,26 @@ public class SemanticTokensLegend
     /// <summary>
     /// The token types a server uses.
     /// </summary>
-    public SemanticTokenTypes[] tokenTypes {  get; set; }
+    public string[] tokenTypes {  get; set; }
     /// <summary>
     /// The token modifiers a server uses.
     /// </summary>
-    public SemanticTokenModifiers[] tokenModifiers { get; set; }
+    public string[] tokenModifiers { get; set; }
+
+    public SemanticTokensLegend()
+    {
+        var tokens = typeof(SemanticTokenTypes).GetEnumValues();
+        tokenTypes = new string[tokens.Length];
+        for (int i = 0; i < tokens.Length; i++)
+        {
+            tokenTypes[i] = MyJsonEnumConverter.GetMyName((tokens.GetValue(i) as Enum)!);
+        }
+
+        var mods = typeof(SemanticTokenModifiers).GetEnumValues();
+        tokenModifiers = new string[mods.Length];
+        for (int i = 0; i < mods.Length; i++)
+        {
+            tokenModifiers[i] = MyJsonEnumConverter.GetMyName((mods.GetValue(i) as Enum)!);
+        }
+    }
 }

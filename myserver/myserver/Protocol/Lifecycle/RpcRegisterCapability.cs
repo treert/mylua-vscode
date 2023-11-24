@@ -34,11 +34,6 @@ public class RpcRegisterCapability : JsonRpcBase<RegistrationParams, Dummy>
 {
     public override string m_method => "client/registerCapability";
 
-    public override void OnCanceled()
-    {
-        throw new NotImplementedException();
-    }
-
     public override void OnRequest()
     {
         throw new NotImplementedException();
@@ -64,11 +59,6 @@ public class UnRegistrationParams
 public class RpcUnregisterCapability : JsonRpcBase<UnRegistrationParams, Dummy>
 {
     public override string m_method => "client/unregisterCapability";
-
-    public override void OnCanceled()
-    {
-        // todo
-    }
 
     public override void OnRequest()
     {

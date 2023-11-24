@@ -40,11 +40,6 @@ public class RpcDocHighlight : JsonRpcBase<PosAndTokenParams, List<DocumentHighl
 {
     public override string m_method => "textDocument/documentHighlight";
 
-    public override void OnCanceled()
-    {
-        // todo
-    }
-
     public override void OnRequest()
     {
         // todo

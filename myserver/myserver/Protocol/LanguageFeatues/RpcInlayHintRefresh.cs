@@ -14,11 +14,6 @@ public class RpcInlayHintRefresh : JsonRpcBase<Dummy, Dummy>
 {
     public override string m_method => "workspace/inlayHint/refresh";
 
-    public override void OnCanceled()
-    {
-        throw new NotImplementedException();
-    }
-
     public override void OnRequest()
     {
         throw new NotImplementedException();

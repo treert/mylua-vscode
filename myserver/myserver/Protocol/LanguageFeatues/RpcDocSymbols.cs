@@ -39,19 +39,16 @@ public class DocumentSymbol
     public DocumentSymbol[]? children { get; set; }
 }
 
-
+[MyProto(Direction = ProtoDirection.ToServer)]
 public class RpcDocSymbols : JsonRpcBase<DocIdAndTokenParams, List<DocumentSymbol>>
 {
     public override string m_method => "textDocument/documentSymbol";
 
-    public override void OnCanceled()
-    {
-        // todo
-    }
-
     public override void OnRequest()
     {
-        // todo
+        var path = ReqArgs.textDocument.uri.ToLocalFilePath();
+        ResData.Clear();
+        SendResponse();
     }
 
     protected override void OnSuccess()

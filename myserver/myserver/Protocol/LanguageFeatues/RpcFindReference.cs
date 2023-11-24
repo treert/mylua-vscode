@@ -26,11 +26,6 @@ public class RpcFindReference : JsonRpcBase<FindReferenceParams, List<Location>>
 {
     public override string m_method => "textDocument/references";
 
-    public override void OnCanceled()
-    {
-        // todo
-    }
-
     public override void OnRequest()
     {
         // todo

@@ -16,11 +16,6 @@ public class RpcShutdown : JsonRpcBase<Dummy, Dummy>
 {
     public override string m_method => "shutdown";
 
-    public override void OnCanceled()
-    {
-        throw new NotImplementedException();
-    }
-
     public override void OnRequest()
     {
         MyServerMgr.Instance.ShutDown(this);

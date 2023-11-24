@@ -122,7 +122,7 @@ namespace MyServer.Misc
             writer.WriteStringValue(GetMyName((value as Enum)!));
         }
 
-        static string GetMyName(Enum source)
+        public static string GetMyName(Enum source)
         {
             System.Reflection.FieldInfo? fi = source.GetType().GetField(source.ToString());
             if (fi != null)

@@ -40,11 +40,6 @@ public class RpcPrepareTypeHierarchy : JsonRpcBase<CallHierarchyPrepareParams, L
 {
     public override string m_method => "textDocument/prepareTypeHierarchy";
 
-    public override void OnCanceled()
-    {
-        // todo
-    }
-
     public override void OnRequest()
     {
         // todo

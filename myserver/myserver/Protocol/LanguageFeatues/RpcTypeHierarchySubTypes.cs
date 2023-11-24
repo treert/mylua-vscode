@@ -10,11 +10,6 @@ public class RpcTypeHierarchySubTypes : JsonRpcBase<TypeHierarchySupertypesParam
 {
     public override string m_method => "typeHierarchy/subtypes";
 
-    public override void OnCanceled()
-    {
-        // todo
-    }
-
     public override void OnRequest()
     {
         // todo

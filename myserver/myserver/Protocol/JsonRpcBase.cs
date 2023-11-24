@@ -107,10 +107,39 @@ namespace MyServer.Protocol
     }
 
     public abstract class JsonRpcBase<TReq, TRes>: JsonRpcBase
-        where TReq: class where TRes: class
+        where TReq : class, new()
+        where TRes : class, new()
     {
         public TReq? m_req;
+        public TReq ReqArgs {
+            get {
+                if(m_req == null)
+                {
+                    m_req = new TReq();
+                }
+                return m_req;
+            }
+            set
+            {
+                m_req = value;
+            }
+        }
         public TRes? m_res;
+        public TRes ResData
+        {
+            get
+            {
+                if (m_res == null)
+                {
+                    m_res = new TRes();
+                }
+                return m_res;
+            }
+            set
+            {
+                m_res = value;
+            }
+        }
         public ResponseError? m_err;
 
         public override sealed void OnRequestParseArgs(JsonNode? args)
@@ -158,6 +187,12 @@ namespace MyServer.Protocol
                 id = m_id,
             };
             ntf.SendNotify();
+        }
+
+        // 默认实现忽略cancel。如果已经开始了，就不能cancel。
+        public override void OnCanceled()
+        {
+            // ignore
         }
 
         public override sealed void OnResponseParseData(JsonNode? result, ResponseError? error)

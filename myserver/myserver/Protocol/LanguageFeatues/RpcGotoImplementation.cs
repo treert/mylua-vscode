@@ -10,11 +10,6 @@ public class RpcGotoImplementation : JsonRpcBase<PosAndTokenParams, GotoDeclareR
 {
     public override string m_method => "textDocument/implementation";
 
-    public override void OnCanceled()
-    {
-        // todo
-    }
-
     public override void OnRequest()
     {
         // todo

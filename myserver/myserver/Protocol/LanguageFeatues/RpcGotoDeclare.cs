@@ -26,11 +26,6 @@ public class RpcGotoDeclare : JsonRpcBase<PosAndTokenParams, GotoDeclareResult>
 {
     public override string m_method => "textDocument/declaration";
 
-    public override void OnCanceled()
-    {
-        // todo
-    }
-
     public override void OnRequest()
     {
         // todo

@@ -10,11 +10,6 @@ public class RpcGotoTypeDefinition : JsonRpcBase<PosAndTokenParams, GotoDeclareR
 {
     public override string m_method => "textDocument/typeDefinition";
 
-    public override void OnCanceled()
-    {
-        // todo
-    }
-
     public override void OnRequest()
     {
         // todo

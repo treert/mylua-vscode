@@ -53,11 +53,6 @@ public class RpcDocLink : JsonRpcBase<DocIdAndTokenParams, List<DocumentLink>>
 {
     public override string m_method => "textDocument/documentLink";
 
-    public override void OnCanceled()
-    {
-        // todo
-    }
-
     public override void OnRequest()
     {
         // todo

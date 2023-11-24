@@ -13,11 +13,6 @@ public class RpcGotoDefinition : JsonRpcBase<PosAndTokenParams, GotoDeclareResul
 {
     public override string m_method => "textDocument/definition";
 
-    public override void OnCanceled()
-    {
-        // todo
-    }
-
     public override void OnRequest()
     {
         // todo

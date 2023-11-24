@@ -89,11 +89,6 @@ public class RpcMoniker : JsonRpcBase<MonikerArgs, List<Moniker[]>>
 {
     public override string m_method => "textDocument/moniker";
 
-    public override void OnCanceled()
-    {
-        throw new NotImplementedException();
-    }
-
     public override void OnRequest()
     {
         throw new NotImplementedException();

@@ -64,13 +64,13 @@ public class SemanticTokensClientCapabilities
     /// </summary>
     public TokenFormat[] formats { get; set; }
     /// <summary>
-    /// Whether the client supports tokens that can overlap each other.
+    /// Whether the client supports tokens that can overlap each other.【vscode 1.84.2 还不支持】
     /// </summary>
-    public bool? overlappingTokenSupport { get; set; }
+    public bool overlappingTokenSupport { get; set; } = false;
     /// <summary>
-    /// Whether the client supports tokens that can span multiple lines.
+    /// Whether the client supports tokens that can span multiple lines.【vscode 1.84.2 还不支持】
     /// </summary>
-    public bool? multilineTokenSupport { get; set; }
+    public bool multilineTokenSupport { get; set; } = false;
     /// <summary>
     /// Whether the client allows the server to actively cancel a
     /// semantic token request, e.g.supports returning

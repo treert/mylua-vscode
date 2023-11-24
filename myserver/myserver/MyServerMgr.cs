@@ -17,6 +17,16 @@ namespace MyServer
     {
         public static MyServerMgr Instance { get; private set; } = new MyServerMgr();
 
+        /// <summary>
+        /// 客户端下发的能力。服务器只读。
+        /// </summary>
+        public ClientCapabilities ClientCapabilities { get; set; }
+
+        /// <summary>
+        /// 服务器发送给客户端的能力。
+        /// </summary>
+        public ServerCapabilities ServerCapabilities { get; set; }
+
         public enum Status
         {
             UnInit,
@@ -31,23 +41,28 @@ namespace MyServer
 
         public void StartInit(InitRpc rpc)
         {
-            if(rpc.m_req!.workspaceFolders.Count > 0) {
-                var fold = rpc.m_req.workspaceFolders[0];
+            if(rpc.ReqArgs.workspaceFolders.Count > 0) {
+                var fold = rpc.ReqArgs.workspaceFolders[0];
                 if (fold.uri.IsFile)
                 {
-                    var LocaPath = fold.uri.LocalPath.TrimStart('/');
+                    var LocaPath = fold.uri.ToLocalFilePath();
                     var files = Directory.GetFiles(LocaPath);
                     NtfShowMessage.ShowMessage(files.ToJsonStr());
                 }
             }
-            
+
+            // 构建服务器能力。全部用静态注册。
+            ServerCapabilities = new ServerCapabilities()
+            {
+                textDocumentSync = new TextDocumentSyncOptions(),
+                documentSymbolProvider = new DocumentSymbolOptions(),
+                semanticTokensProvider = new SemanticTokensOptions(),
+            };
+
             rpc.m_res = new InitResult()
             {
-                serverInfo = new ServerInfo() { name = "mylua", version = ""},
-                capabilities = new ServerCapabilities() {
-                    positionEncoding = PositionEncodingKind.UTF16,
-                    textDocumentSync = new TextDocumentSyncOptions() { },
-                },
+                serverInfo = new ServerInfo() { name = "mylua", version = "0.1.0"},
+                capabilities = ServerCapabilities,
             };
             //rpc.m_err = new ResponseError();
             //rpc.m_err.code = ErrorCodes.InternalError;

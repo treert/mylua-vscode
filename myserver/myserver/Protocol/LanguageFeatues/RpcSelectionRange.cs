@@ -32,11 +32,6 @@ public class RpcSelectionRange : JsonRpcBase<SelectionRangeParams, List<Selectio
 {
     public override string m_method => "textDocument/selectionRange";
 
-    public override void OnCanceled()
-    {
-        // todo
-    }
-
     public override void OnRequest()
     {
         // todo

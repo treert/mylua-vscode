@@ -51,11 +51,6 @@ public class RpcSemanticTokensFull : JsonRpcBase<DocIdAndTokenParams, SemanticTo
 {
     public override string m_method => "textDocument/semanticTokens/full";
 
-    public override void OnCanceled()
-    {
-        // todo
-    }
-
     public override void OnRequest()
     {
         // todo
@@ -81,11 +76,6 @@ public class RpcSemanticTokensFullDelta : JsonRpcBase<SemanticTokensDeltaParams,
 {
     public override string m_method => "textDocument/semanticTokens/full/delta";
 
-    public override void OnCanceled()
-    {
-        // todo
-    }
-
     public override void OnRequest()
     {
         // todo
@@ -106,11 +96,6 @@ public class RpcSemanticTokensRange : JsonRpcBase<SemanticTokensRangeParams, Sem
 {
     public override string m_method => "textDocument/semanticTokens/range";
 
-    public override void OnCanceled()
-    {
-        // todo
-    }
-
     public override void OnRequest()
     {
         // todo
@@ -125,11 +110,6 @@ public class RpcSemanticTokensRange : JsonRpcBase<SemanticTokensRangeParams, Sem
 public class RpcSemanticTokensRefresh : JsonRpcBase<Dummy, Dummy>
 {
     public override string m_method => "workspace/semanticTokens/refresh";
-
-    public override void OnCanceled()
-    {
-        throw new NotImplementedException();
-    }
 
     public override void OnRequest()
     {

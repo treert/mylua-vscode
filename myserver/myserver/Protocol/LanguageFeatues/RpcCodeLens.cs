@@ -39,11 +39,6 @@ public class RpcCodeLens : JsonRpcBase<DocIdAndTokenParams, List<CodeLens>>
 {
     public override string m_method => "textDocument/codeLens";
 
-    public override void OnCanceled()
-    {
-        // todo
-    }
-
     public override void OnRequest()
     {
         // todo
@@ -59,11 +54,6 @@ public class RpcCodeLensResolve : JsonRpcBase<CodeLens, CodeLens>
 {
     public override string m_method => "codeLens/resolve";
 
-    public override void OnCanceled()
-    {
-        // todo
-    }
-
     public override void OnRequest()
     {
         // todo
@@ -78,11 +68,6 @@ public class RpcCodeLensResolve : JsonRpcBase<CodeLens, CodeLens>
 public class RpcCodeLensRefresh : JsonRpcBase<Dummy, Dummy>
 {
     public override string m_method => "workspace/codeLens/refresh";
-
-    public override void OnCanceled()
-    {
-        throw new NotImplementedException();
-    }
 
     public override void OnRequest()
     {

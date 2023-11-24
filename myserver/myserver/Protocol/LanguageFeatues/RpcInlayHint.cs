@@ -116,11 +116,6 @@ public class RpcInlayHint : JsonRpcBase<InlayHintParams, List<InlayHint>>
 {
     public override string m_method => "textDocument/inlayHint";
 
-    public override void OnCanceled()
-    {
-        throw new NotImplementedException();
-    }
-
     public override void OnRequest()
     {
         throw new NotImplementedException();
