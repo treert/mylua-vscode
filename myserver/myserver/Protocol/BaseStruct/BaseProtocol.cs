@@ -25,4 +25,8 @@ public enum ProtoDirection
 public sealed class MyProtoAttribute : Attribute
 {
     public required ProtoDirection Direction { get; set; }
+    /// <summary>
+    /// 是否时只读的。默认时
+    /// </summary>
+    public bool IsReadOnly { get; set; } = true;
 }

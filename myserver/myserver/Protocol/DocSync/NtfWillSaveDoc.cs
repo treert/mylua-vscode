@@ -38,12 +38,13 @@ public class WillSaveTextDocParams
 客户端保存文件前，发送给服务器。
 发送的 DocId 应该处于 Open 状态
 */
+[MyProto(Direction = ProtoDirection.ToServer)]
 public class NtfWillSaveDoc : JsonNtfBase<WillSaveTextDocParams>
 {
     public override string m_method => "textDocument/willSave";
 
     public override void OnNotify()
     {
-        // todo
+        // do nothing now
     }
 }

@@ -55,8 +55,8 @@ namespace MyServer
             ServerCapabilities = new ServerCapabilities()
             {
                 textDocumentSync = new TextDocumentSyncOptions(),
-                documentSymbolProvider = new DocumentSymbolOptions(),
-                semanticTokensProvider = new SemanticTokensOptions(),
+                //documentSymbolProvider = new DocumentSymbolOptions(),
+                //semanticTokensProvider = new SemanticTokensOptions(),
             };
 
             rpc.m_res = new InitResult()

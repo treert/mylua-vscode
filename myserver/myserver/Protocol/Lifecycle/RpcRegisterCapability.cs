@@ -30,6 +30,7 @@ public class RegistrationParams
     public List<Registration> registrations { get; set; }
 }
 
+[MyProto(Direction = ProtoDirection.ToClient)]
 public class RpcRegisterCapability : JsonRpcBase<RegistrationParams, Dummy>
 {
     public override string m_method => "client/registerCapability";
@@ -56,6 +57,7 @@ public class UnRegistrationParams
     public List<UnRegistration> unregisterations { get; set; }
 }
 
+[MyProto(Direction = ProtoDirection.ToClient)]
 public class RpcUnregisterCapability : JsonRpcBase<UnRegistrationParams, Dummy>
 {
     public override string m_method => "client/unregisterCapability";

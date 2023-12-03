@@ -28,9 +28,10 @@ public enum TextDocumentSyncKind
 public class SaveOptions
 {
     /// <summary>
-    /// The client is supposed to include the content on save.
+    /// The client is supposed to include the content on save.<br/>
+    /// 不需要这个了
     /// </summary>
-    public bool includeText { get; set; } = true;
+    public bool includeText { get; set; } = false;
 }
 
 public class TextDocumentSyncOptions

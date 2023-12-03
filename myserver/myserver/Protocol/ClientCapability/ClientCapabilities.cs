@@ -60,12 +60,12 @@ public class ClientCapabilities
         public class _FileOperations
         {
             public bool? dynamicRegistration { get; set; }
-            public bool? didCreate { get; set; }
-            public bool? willCreate { get; set; }
-            public bool? didRename { get; set; }
-            public bool? willRename { get; set; }
-            public bool? didDelete { get; set; }
-            public bool? willDelete { get; set;}
+            public bool? didCreate { get; set; } = true;
+            public bool? willCreate { get; set; } = true;
+            public bool? didRename { get; set; } = true;
+            public bool? willRename { get; set; } = true;
+            public bool? didDelete { get; set; } = true;
+            public bool? willDelete { get; set; } = true;
         }
         /// <summary>
         /// The client has support for file requests/notifications.

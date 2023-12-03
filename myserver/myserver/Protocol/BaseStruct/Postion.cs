@@ -22,7 +22,7 @@ public enum PositionEncodingKind
     UTF32,
 }
 
-public class Position
+public struct Position
 {
     /// <summary>
     /// Line position in a document (zero-based).
@@ -40,11 +40,9 @@ public class Position
 }
 
 /// <summary>
-/// 左闭右开
-/// 
-/// Therefore, the end position is exclusive.
+/// the end position is exclusive. 左闭右开<br/>
 /// If you want to specify a range that contains a line including the line ending character(s)
-/// then use an end position denoting the start of the next line. For example:
+/// then use an end position denoting the start of the next line.
 /// </summary>
 public class Range
 {

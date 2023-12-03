@@ -1,6 +1,5 @@
 ﻿
 using MyServer.Misc;
-using MyServer.Protocol.BaseStruct;
 using System;
 using System.Collections.Generic;
 using System.Linq;

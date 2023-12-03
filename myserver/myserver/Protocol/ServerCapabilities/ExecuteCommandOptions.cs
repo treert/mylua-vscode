@@ -13,5 +13,5 @@ public class ExecuteCommandOptions : WorkDoneProgressOptions
     /// <summary>
     /// The commands to be executed on the server
     /// </summary>
-    public string[] commands { get; set; }
+    public List<string> commands { get; set; } = new List<string>();
 }

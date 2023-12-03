@@ -16,6 +16,15 @@ public class Location
 }
 
 /// <summary>
+/// 对比 Location 可以忽略range
+/// </summary>
+public class LocationOptRange
+{
+    public Uri uri { get; set; }
+    public Range? range { get; set; }
+}
+
+/// <summary>
 /// Represents a link between a source and a target location.
 /// </summary>
 public class LocationLink

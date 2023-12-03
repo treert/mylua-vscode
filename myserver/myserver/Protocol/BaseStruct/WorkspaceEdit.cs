@@ -10,7 +10,7 @@ using static System.Net.Mime.MediaTypeNames;
 using System.Xml.Linq;
 using System.Drawing;
 
-namespace MyServer.Protocol.BaseStruct;
+namespace MyServer.Protocol;
 /// <summary>
 /// todo@later
 /// </summary>

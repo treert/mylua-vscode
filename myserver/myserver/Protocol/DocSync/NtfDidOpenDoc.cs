@@ -15,6 +15,7 @@ public class DidOpenDocParams
     public TextDocItem textDocument { get; set; }
 }
 
+[MyProto(Direction = ProtoDirection.ToServer, IsReadOnly = false)]
 public class NtfDidOpenDoc : JsonNtfBase<DidOpenDocParams>
 {
     public override string m_method => "textDocument/didOpen";

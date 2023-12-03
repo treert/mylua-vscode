@@ -10,9 +10,9 @@ public class WorkspaceFoldersServerCapabilities
     /// <summary>
     /// The server has support for workspace folders
     /// </summary>
-    public bool? supported { get; set; }
+    public bool? supported { get; set; } = true;
     /// <summary>
     /// Whether the server wants to receive workspace folder change notifications.
     /// </summary>
-    public bool? changeNotifications { get; set; }
+    public bool? changeNotifications { get; set; } = true;
 }

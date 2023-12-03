@@ -31,7 +31,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Protocol\WorkspaceFeatures\" />
     <Folder Include="Protocol\NoteBookSync\" />
   </ItemGroup>
 
