@@ -12,3 +12,4 @@ My.Logger.Info($"pwd={Environment.CurrentDirectory}");
 JsonRpcMgr.Instance.Init();
 MySession.RunServer(40080);
 My.Logger.Info("Server Start");
+
