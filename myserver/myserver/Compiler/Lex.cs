@@ -102,8 +102,15 @@ public class Token
     }
 }
 
+public class LexError
+{
+    public Protocol.Position pos;
+    public string msg;
+}
+
 public class Lex
 {
+    public List<LexError> m_errors;
     public Token NowToken { get;private set; } = new Token(TokenType.EOF);
 
     public bool IsInDollarString => dollar_char != '\0' && dollar_open_cnt == 0;
@@ -196,7 +203,7 @@ public class Lex
         }
     }
 
-    Token _ReaadNameOrKeyword()
+    Token _ReadNameOrKeyword()
     {
         Debug.Assert(IsWordLetter(_cur_char));
         _buf.Clear();
@@ -207,6 +214,60 @@ public class Lex
         } while (IsWordLetterOrNumber(_cur_char));
         var token = new Token(_buf.ToString(), false);
         return token;
+    }
+
+    // \xdd
+    char _ReadHexEsc()
+    {
+        _NextChar();// skip \
+    }
+
+    void _ReadStringAndAddToBuffer(char del1, char del2)
+    {
+        while(_cur_char != del1 && _cur_char != del2)
+        {
+            switch(_cur_char)
+            {
+                case '\0':
+                    ErrorHappen("unfinished string. reach EOF.");
+                    return;
+                case '\n':
+                    ErrorHappen("unfinished string. reach end of line.");
+                    return;
+                case '\\':
+                    {
+                        char c = '\0'; /* final character to be saved */
+                        _NextChar();
+                        switch (_cur_char)
+                        {
+                            case 'a': c = '\a'; goto read_save;
+                            case 'b': c = '\b'; goto read_save;
+                            case 'f': c = '\f'; goto read_save;
+                            case 'n': c = '\n'; goto read_save;
+                            case 'r': c = '\r'; goto read_save;
+                            case 't': c = '\t'; goto read_save;
+                            case 'v': c = '\v'; goto read_save;
+                            case 'x': c = '\a'; goto read_save;
+                            case 'u': c = '\a'; goto read_save;
+                            case '\n': c = '\n'; goto save;
+                            case '\\': case '\"': case '\'':
+                                c = _cur_char; goto save;
+                            case '\0': goto no_save; /* will raise an error next loop */
+                        }
+                    read_save:
+                        _NextChar();
+                    save:
+                        _buf.Append(c);
+                    no_save:
+                        break;
+                    }
+                default:
+                    _buf.Append(_cur_char);
+                    _NextChar();
+                    break;
+            }
+
+        }
     }
 
     Token _ReadInDollarString()
@@ -222,7 +283,7 @@ public class Lex
             }
             else if (IsWordLetter(_cur_char))
             {
-                return _ReaadNameOrKeyword();
+                return _ReadNameOrKeyword();
             }
             else
             {
@@ -243,6 +304,24 @@ public class Lex
 
         }
         return null;
+    }
+
+    Protocol.Position _NowPos()
+    {
+        return new Protocol.Position {
+            line = (uint)_line,
+            character = (uint)_column,
+        };
+    }
+
+    void ErrorHappen(string msg)
+    {
+        var err = new LexError
+        {
+            pos = _NowPos(),
+            msg = msg,
+        };
+        m_errors.Add(err);
     }
 
     Token _GenIllegalToken(string msg)
