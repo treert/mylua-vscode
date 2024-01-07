@@ -216,10 +216,23 @@ public class Lex
         return token;
     }
 
+    int GetOneHex()
+    {
+        char c = _cur_char;
+        _NextChar();
+        if (Char.IsAsciiHexDigit(c))
+        {
+            return LexUtil.HexToInt(c);
+        }
+        return 
+    }
+
     // \xdd
     char _ReadHexEsc()
     {
         _NextChar();// skip \
+        int x
+        
     }
 
     void _ReadStringAndAddToBuffer(char del1, char del2)
