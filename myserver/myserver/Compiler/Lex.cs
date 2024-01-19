@@ -216,7 +216,8 @@ public class Lex
         return token;
     }
 
-    int GetOneHex()
+    // Eat Cur Char Then Try Convert To int
+    uint _TryEatOneHex()
     {
         char c = _cur_char;
         _NextChar();
@@ -224,15 +225,23 @@ public class Lex
         {
             return LexUtil.HexToInt(c);
         }
-        return 
+        return 255;
     }
 
     // \xdd
     char _ReadHexEsc()
     {
-        _NextChar();// skip \
-        int x
-        
+        _NextChar();// skip x
+        uint x1 = _TryEatOneHex();
+        uint x2 = _TryEatOneHex();
+
+
+    }
+
+    // \u{aabbccdd}
+    char _ReadUnicodeEsc()
+    {
+
     }
 
     void _ReadStringAndAddToBuffer(char del1, char del2)
@@ -260,8 +269,8 @@ public class Lex
                             case 'r': c = '\r'; goto read_save;
                             case 't': c = '\t'; goto read_save;
                             case 'v': c = '\v'; goto read_save;
-                            case 'x': c = '\a'; goto read_save;
-                            case 'u': c = '\a'; goto read_save;
+                            case 'x': _ReadHexEsc(); goto no_save;
+                            case 'u': _ReadUnicodeEsc(); goto no_save;
                             case '\n': c = '\n'; goto save;
                             case '\\': case '\"': case '\'':
                                 c = _cur_char; goto save;
