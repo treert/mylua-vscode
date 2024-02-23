@@ -4,6 +4,40 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
+/*
+简单梳理：
+- set
+    - _G.xx = 
+    - aa.bb = 
+    - aa.xx.bb = 
+    - aa[bb] = 
+    - aa.xx.[bb] = 
+- get
+    - xx.bb
+    - _G.xx 
+- call
+    - f(x,y,z): tt
+- assign
+    - local x,y = 
+    - x,y = 
+        - global
+        - upvalue
+
+特殊考虑 _G _ENV 
+
+- class
+    - new field
+        - @field xxx ttt
+        - set
+            - tt.bb = 
+    - new method
+        - t.f() end
+        - t.f = ${}
+- enum 常量表。特殊处理
+
+
+*/
+
 namespace MyServer.Compiler;
 /// <summary>
 /// 一些静态工具

@@ -153,6 +153,8 @@ public class Lex
 
     StringBuilder _buf = new StringBuilder();
 
+    MyString _content;
+
     string[] _rows;
     string? _cur_row;
 
@@ -161,10 +163,16 @@ public class Lex
     int dollar_open_cnt;
 
     char _cur_char;
+    char _cur_idx;
     int _line;
     int _column;
     char _NextChar()
     {
+        if(_content.Length > _cur_idx)
+        {
+            _cur_char = _content[_cur_idx];
+            _column++;
+        }
         if(_cur_row != null)
         {
             _column++;
@@ -234,14 +242,14 @@ public class Lex
         _NextChar();// skip x
         uint x1 = _TryEatOneHex();
         uint x2 = _TryEatOneHex();
-
+        return '1';
 
     }
 
     // \u{aabbccdd}
     char _ReadUnicodeEsc()
     {
-
+        return '1';
     }
 
     void _ReadStringAndAddToBuffer(char del1, char del2)
@@ -315,6 +323,7 @@ public class Lex
         while(_cur_char != dollar_char) {
             
         }
+        return null;
     }
 
 
