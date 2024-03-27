@@ -1,5 +1,7 @@
-﻿using System;
+﻿using MyServer.Misc;
+using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -17,9 +19,10 @@ namespace MyServer.Compiler;
  */
 public class LuaFile
 {
-    private LuaFile(string content)
+    public LuaFile(string content)
     {
         m_content = content;
+        m_cont.InsertRange(0, content.AsSpan());
         BuildLineOffsets();
     }
 
@@ -63,6 +66,7 @@ public class LuaFile
     private static readonly char[] s_eol_chs = new char[] { '\n', '\r'};
 
     private string m_content = string.Empty;
+    private MyList<char> m_cont = new MyList<char>();
     private List<int> m_line_offsets = new List<int>();// 每一行开头字符的偏移
 
 }

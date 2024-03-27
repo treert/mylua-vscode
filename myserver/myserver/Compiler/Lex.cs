@@ -153,7 +153,7 @@ public class Lex
 
     StringBuilder _buf = new StringBuilder();
 
-    MyString _content;
+    string _content;
 
     string[] _rows;
     string? _cur_row;
