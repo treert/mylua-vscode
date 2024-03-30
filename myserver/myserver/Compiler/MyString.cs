@@ -1,41 +1,53 @@
 ﻿using MyServer.Protocol;
 using System;
+using System.Buffers;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace MyServer.Compiler;
 
 /// <summary>
-/// 类似 List<char> 方便后期支持一些定制的需求
+/// 专用于
+/// 类似 List<char> 方便后期支持一些定制的需求。
 /// </summary>
 public class MyString
 {
     private char[] _items = s_emptyArray;
-    private int _size;
+    private int _size = 0;
     private static readonly char[] s_emptyArray = new char[0];
     public const int MaxSupportCount = 0x7FFFFFC7;//  2,147,483,591 from dotnet
 
-    public int Count
+    public char this[int index]
     {
-        get { return _size; }
-        set
+        get
         {
-            EnsureCapacity(value);
-            _size = value;
+            return index < _size ? _items[index]: '\0';
         }
     }
 
-    public int Capacity
+    public override string ToString()
+    {
+        return new string(_items, 0 , _size);
+    }
+
+    public int Length
+    {
+        get { return _size; }
+    }
+
+    private int Capacity
     {
         get
         {
             return _items.Length;
         }
-        set
+        private set
         {
             if (value == _items.Length)
             {
@@ -57,73 +69,58 @@ public class MyString
         }
     }
 
-    public void Insert(int index, T item)
+    /// <summary>
+    /// this[range_start,range_end-1] = str
+    /// </summary>
+    public void ReplaceRange(int range_start, int range_end, string str)
     {
-        if ((uint)index > (uint)_size)
+        int add_len = str.Length - (range_end - range_start);
+        if (add_len > 0)
         {
-            throw new ArgumentOutOfRangeException(nameof(index), "index need in [0,Count]");
+            EnsureCapacity(_size + add_len);
         }
-        if (_size == _items.Length)
+
+        if(add_len != 0)
         {
-            Grow(_size + 1);
+            Array.Copy(_items, range_end, _items, range_start + str.Length, _size - range_end);
         }
-        if (index < _size)
-        {
-            Array.Copy(_items, index, _items, index + 1, _size - index);
-        }
-        _items[index] = item;
-        _size++;
+
+        str.CopyTo(0, _items, range_start, str.Length);
+        _size += add_len;
     }
 
-    public void InsertRange(int index, ICollection<T> collection)
+    /// <summary>
+    /// 清空
+    /// </summary>
+    public void Empty()
     {
-        if (collection == null)
+        _size = 0;
+    }
+
+    public int IndexOfAny(char[] anyOf, int startIndex = 0, int count = -1)
+    {
+        if(count < 0)
         {
-            throw new ArgumentNullException(nameof(collection));
+            count = _size - startIndex;
         }
-        if ((uint)index > (uint)_size)
+        int num = new ReadOnlySpan<char>(_items, startIndex, count).IndexOfAny(anyOf);
+        return num >= 0 ? num + startIndex : -1;
+    }
+
+    public int IndexOf(char ch, int startIndex = 0, int count = -1)
+    {
+        if (count < 0)
         {
-            throw new ArgumentOutOfRangeException(nameof(index), "index need in [0,Count]");
+            count = _size - startIndex;
         }
-        if (collection is ICollection<T> collection2)
-        {
-            int count = collection2.Count;
-            if (count > 0)
-            {
-                if (_items.Length - _size < count)
-                {
-                    Grow(_size + count);
-                }
-                if (index < _size)
-                {
-                    Array.Copy(_items, index, _items, index + count, _size - index);
-                }
-                if (this == collection2)
-                {
-                    Array.Copy(_items, 0, _items, index, index);
-                    Array.Copy(_items, index + count, _items, index * 2, _size - index);
-                }
-                else
-                {
-                    collection2.CopyTo(_items, index);
-                }
-                _size += count;
-            }
-        }
-        else
-        {
-            using IEnumerator<T> enumerator = collection.GetEnumerator();
-            while (enumerator.MoveNext())
-            {
-                Insert(index++, enumerator.Current);
-            }
-        }
+        int num = Array.IndexOf(_items, ch, startIndex, count);
+        return num >= 0 ? num + startIndex : -1;
     }
 
     /*
      * 确保容量够，会使用倍增方案增加数组容量
      */
-    public int EnsureCapacity(int capacity)
+    private int EnsureCapacity(int capacity)
     {
         if (_items.Length < capacity)
         {
