@@ -21,8 +21,7 @@ public class LuaFile
 {
     public LuaFile(string content)
     {
-        m_content.ReplaceRange(0, 0, content);
-        BuildLineOffsets();
+        m_content.ResetString(content);
     }
 
     public static LuaFile CreateFromFile(string path)
@@ -32,31 +31,9 @@ public class LuaFile
         return file;
     }
 
-    private void BuildLineOffsets()
-    {
-        m_line_offsets.Clear();
-        m_line_offsets.Add(0);
-
-        int cur = 0;
-        while(cur < m_content.Length)
-        {
-            cur = m_content.IndexOfAny(s_eol_chs, cur);
-            if (cur == -1)
-            {
-                break;
-            }
-            if (m_content[cur] == '\r' && m_content[cur + 1] == '\n')
-            {
-                cur = cur + 1;// \r\n
-            }
-            cur = cur + 1;
-            m_line_offsets.Add(cur);
-        }
-    }
-
     private static readonly char[] s_eol_chs = new char[] { '\n', '\r'};
 
     private MyString m_content = new MyString();
-    private List<int> m_line_offsets = new List<int>();// 每一行开头字符的偏移
 
+    private Lex m_lex = new Lex();
 }

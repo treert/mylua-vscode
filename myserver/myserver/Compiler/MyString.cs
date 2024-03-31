@@ -2,7 +2,11 @@
 using System;
 using System.Buffers;
 using System.Collections.Generic;
+using System.Collections.Immutable;
+using System.Data.Common;
+using System.Diagnostics;
 using System.Linq;
+using System.Numerics;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Text;
@@ -13,12 +17,46 @@ using static System.Runtime.InteropServices.JavaScript.JSType;
 namespace MyServer.Compiler;
 
 /// <summary>
-/// 专用于
+/// 专用于MyServer,支持修改。
 /// 类似 List<char> 方便后期支持一些定制的需求。
+/// 1. 换行符在最底层全部替换成 \n
 /// </summary>
 public class MyString
 {
+    public class Range
+    {
+        private int m_start;
+        private int m_length;
+        private MyString m_str;
+        public Range(MyString str,int start, int length)
+        {
+            m_start = start;
+            m_length = length;
+            m_str = str;
+        }
+        public int RawStart => m_start;
+        public int RawEnd => m_start + m_length;
+        public int Length => m_length;
+        public char this[int index]
+        {
+            get { return index < Length ? m_str[index + m_start] : '\0'; }
+        }
+        public override string ToString()
+        {
+            return new string(m_str._items, m_start, Length);
+        }
+
+        public Range SubRange(int start, int length)
+        {
+            Debug.Assert(start + length <= Length);
+            return new Range(m_str, m_start + start, length);
+        }
+
+        public MyString RawString => m_str;
+    }
+
     private char[] _items = s_emptyArray;
+    private List<int> _line_offsets = new List<int>();
     private int _size = 0;
     private static readonly char[] s_emptyArray = new char[0];
     public const int MaxSupportCount = 0x7FFFFFC7;//  2,147,483,591 from dotnet
@@ -27,13 +65,37 @@ public class MyString
     {
         get
         {
-            return index < _size ? _items[index]: '\0';
+            return index < Length ? _items[index]: '\0';
         }
     }
 
     public override string ToString()
     {
         return new string(_items, 0 , _size);
+    }
+
+    public Range ToRange()
+    {
+        return new Range(this, 0, Length);
+    }
+
+    public Protocol.Position GetPosByOffset(int offset)
+    {
+        Debug.Assert(offset >= 0);
+        // get aa[idx] <= offset
+        int idx = _line_offsets.BinarySearch(offset);
+        if (idx < 0)
+        {
+            idx = -(idx + 1)-1;
+            Debug.Assert(idx >= 0 && idx < _line_offsets.Count);
+        }
+        int line = idx;
+        int cloumn = offset - _line_offsets[idx];
+        return new Protocol.Position
+        {
+            line = (uint)line,
+            character = (uint)cloumn,
+        };
     }
 
     public int Length
@@ -47,7 +109,7 @@ public class MyString
         {
             return _items.Length;
         }
-        private set
+        set
         {
             if (value == _items.Length)
             {
@@ -69,11 +131,17 @@ public class MyString
         }
     }
 
+    public void ResetString(string value)
+    {
+        ReplaceRange(0, Length, value);
+    }
+
     /// <summary>
     /// this[range_start,range_end-1] = str
     /// </summary>
     public void ReplaceRange(int range_start, int range_end, string str)
     {
+        str = str.ReplaceLineEndings("\n");
         int add_len = str.Length - (range_end - range_start);
         if (add_len > 0)
         {
@@ -87,6 +155,25 @@ public class MyString
 
         str.CopyTo(0, _items, range_start, str.Length);
         _size += add_len;
+        ReBuildLineOffsets();
+    }
+
+    private void ReBuildLineOffsets()
+    {
+        _line_offsets.Clear();
+        _line_offsets.Add(0);
+
+        int cur = 0;
+        while (cur < _items.Length)
+        {
+            cur = Array.IndexOf(_items, '\n', cur);
+            if (cur == -1)
+            {
+                break;
+            }
+            cur = cur + 1;
+            _line_offsets.Add(cur);
+        }
     }
 
     /// <summary>
@@ -133,7 +220,7 @@ public class MyString
     {
         if ((uint)capacity > (uint)MaxSupportCount)
         {
-            throw new ArgumentOutOfRangeException(nameof(capacity), "MyList overflow");
+            throw new ArgumentOutOfRangeException(nameof(capacity), "Too Long String. MyString overflow.");
         }
         int num = ((_items.Length == 0) ? 4 : (2 * _items.Length));
         if ((long)(uint)num > MaxSupportCount)

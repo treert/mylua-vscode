@@ -120,26 +120,15 @@ public class Lex
         return NowToken;
     }
 
-    public void Init(string[] rows)
+    public void Init(MyString.Range content)
     {
-        _rows = rows;
-        _line = 0;
-        _column = 0;
-        _cur_char = '\0';
-        _cur_row = null;
+        _content = content;
+        _cur_idx = -1;
+        _NextChar();
 
         dollar_mode = false;
         dollar_char = '\0';
         dollar_open_cnt = 0;
-
-
-        // set first char
-        if (_rows.Length > 0 )
-        {
-            _cur_row = _rows[_line];
-            _column = -1;// trick
-            _NextChar();
-        }
     }
 
     static bool IsWordLetter(char c)
@@ -153,61 +142,26 @@ public class Lex
 
     StringBuilder _buf = new StringBuilder();
 
-    string _content;
-
-    string[] _rows;
-    string? _cur_row;
+    MyString.Range _content;
 
     bool dollar_mode;
     char dollar_char;
     int dollar_open_cnt;
 
     char _cur_char;
-    char _cur_idx;
-    int _line;
-    int _column;
+    int _cur_idx;
+
     char _NextChar()
     {
-        if(_content.Length > _cur_idx)
+        _cur_idx++;
+        if (_cur_idx < _content.Length)
         {
-            _cur_char = _content[_cur_idx];
-            _column++;
-        }
-        if(_cur_row != null)
-        {
-            _column++;
-            if (_column < _cur_row.Length)
-            {
-                _cur_char = _cur_row[_column];
-            }
-            else if (_column == _cur_row.Length)
-            {
-                // 换行符算当前行的最后一个
-                _cur_char = '\n';
-            }
-            else // 换行
-            {
-                _line++;
-                _column = 0;
-                if (_line < _rows.Length)
-                {
-                    _cur_row = _rows[_line];
-                    _cur_char = (_cur_row.Length > 0) ? _cur_row[0] : '\n';
-                }
-                else
-                {
-                    _cur_row = null;// 结束了。
-                    _cur_char = '\0';
-                }
-            }
-
-            return _cur_char;
+            return _content[_cur_idx];
         }
         else
         {
-            // 已经到未见尾了
-            _cur_char = '\0';
-            return _cur_char;
+            _cur_idx = _content.Length;
+            return '\0';
         }
     }
 
@@ -339,10 +293,7 @@ public class Lex
 
     Protocol.Position _NowPos()
     {
-        return new Protocol.Position {
-            line = (uint)_line,
-            character = (uint)_column,
-        };
+        return _content.RawString.GetPosByOffset(_cur_idx);
     }
 
     void ErrorHappen(string msg)
