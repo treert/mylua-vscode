@@ -56,10 +56,25 @@ public enum TokenType
 
 public class Token
 {
+    public int RealTokenType
+    {
+        get
+        {
+            if (err_msg == null) return (int)TokenType.Illegal;
+            return type;
+        }
+    }
     public int type;
     public long num_int;
     public double num_double;
     public string str;
+
+    public MyString.Range my_range;
+
+    public string err_msg = null;// 如果不为空，说明有错误
+
+
+
     public Token(TokenType tokenType)
     {
         type = (int)tokenType;
@@ -68,6 +83,16 @@ public class Token
     public Token(char c)
     {
         type = (int)c;
+    }
+
+    public void SetMyRange(MyString.Range range)
+    {
+        my_range = range;
+    }
+
+    public void MarkError(string msg)
+    {
+        err_msg = msg;
     }
 
     public Token(string str_, bool is_string) {
@@ -108,7 +133,7 @@ public class LexError
     public string msg;
 }
 
-public class Lex
+public class LuaLex
 {
     public List<LexError> m_errors;
     public Token NowToken { get;private set; } = new Token(TokenType.EOF);
@@ -124,7 +149,7 @@ public class Lex
     {
         _content = content;
         _cur_idx = -1;
-        _NextChar();
+        _NextChar();// ready for read token
 
         dollar_mode = false;
         dollar_char = '\0';
@@ -156,13 +181,22 @@ public class Lex
         _cur_idx++;
         if (_cur_idx < _content.Length)
         {
-            return _content[_cur_idx];
+            _cur_char = _content[_cur_idx];
+            return _cur_char;
         }
         else
         {
             _cur_idx = _content.Length;
+            _cur_char = '\0';
             return '\0';
         }
+    }
+
+    bool _CheckThenSkip(char ch)
+    {
+        bool ok = _cur_char == ch;
+        if (ok) { _NextChar(); }
+        return ok;
     }
 
     Token _ReadNameOrKeyword()
@@ -282,13 +316,122 @@ public class Lex
 
 
 
-    Token _GetNextToken()
+    Token _ReadNextToken()
     {
         if (IsInDollarString)
         {
-
+            return _ReadInDollarString();
+        }
+        
+        while (_cur_char != '\0')
+        {
+            switch(_cur_char)
+            {
+                case '\r':
+                    Debug.Fail("should not happend!");
+                    _NextChar();
+                    break;
+                case '\n':
+                case ' ':
+                case '\f':
+                case '\t':
+                case '\v':
+                    _NextChar();// ignore space
+                    break;
+                case '$':
+                    var tok = _NewTokenForCurChar();
+                    _NextChar();
+                    if (_cur_char == '"' || _cur_char == '\'')
+                    {
+                        if (dollar_char != '\0')
+                        {
+                            tok.MarkError("do not support inner <$string>");
+                            // 就不吃掉了。下一个token当成普通字符串
+                        }
+                        else
+                        {
+                            dollar_char = _cur_char;
+                            Debug.Assert(dollar_open_cnt == 0);
+                            _NextChar();
+                        }
+                    }
+                    return tok;
+                case '-':
+                    _NextChar();
+                    if (_cur_char != '-')
+                    {
+                        return _NewToken4OneChar('-', _cur_idx - 1);
+                    }
+                    // is a comment
+                    _NextChar();
+                    if (_cur_char == '[') // block comment
+                    {
+                        return _ReadLongComment();
+                    }
+                    else // line comment
+                    {
+                        return _ReadLineComment();
+                    }
+                case '[':
+                    _NextChar();
+                    if (_cur_char == '=' || _cur_char == '[')
+                    {
+                        return _ReadRawString();
+                    }
+                    return _NewToken4OneChar('[', _cur_idx - 1);
+                case '=':
+                    _NextChar();
+                    if (_CheckThenSkip('=')) return _NewTokenByType(TokenType.EQ, _cur_idx-2, 2);
+                    else return _NewToken4OneChar('=', _cur_idx - 1);
+                case '<':
+                    _NextChar();
+                    if (_CheckThenSkip('=')) return _NewTokenByType(TokenType.LE, _cur_idx-2, 2);
+                    else if (_CheckThenSkip('<')) return _NewTokenByType(TokenType.SHIFT_LEFT, _cur_idx-2, 2);
+                    else return _NewToken4OneChar('<', _cur_idx - 1);
+                case '>':
+                    _NextChar();
+                    if (_CheckThenSkip('=')) return _NewTokenByType(TokenType.GE, _cur_idx-2, 2);
+                    else if (_CheckThenSkip('>')) return _NewTokenByType(TokenType.SHIFT_RIGHT, _cur_idx -2, 2);
+                    else return _NewToken4OneChar('>', _cur_idx - 1);
+            }
         }
         return null;
+    }
+
+    Token _NewTokenForCurChar()
+    {
+        var tok = new Token(_cur_char);
+        tok.SetMyRange(_content.SubRange(_cur_idx, 1));
+        return tok;
+    }
+
+    Token _NewToken4OneChar(char ch, int idx)
+    {
+        var tok = new Token(ch);
+        tok.SetMyRange(_content.SubRange(idx, 1));
+        return tok;
+    }
+
+    Token _NewTokenByType(TokenType type, int idx, int lenght)
+    {
+        var tok = new Token(type);
+        tok.SetMyRange(_content.SubRange(idx, lenght));
+        return tok;
+    }
+
+    Token _ReadLongComment()
+    {
+
+    }
+
+    Token _ReadLineComment()
+    {
+
+    }
+
+    Token _ReadRawString()
+    {
+
     }
 
     Protocol.Position _NowPos()

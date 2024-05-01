@@ -20,6 +20,8 @@ namespace MyServer.Compiler;
 /// 专用于MyServer,支持修改。
 /// 类似 List<char> 方便后期支持一些定制的需求。
 /// 1. 换行符在最底层全部替换成 \n
+/// 2. vscode 是按行列定位字符的。插件内部用offset定位，额外多一个行数索引数组。
+/// 3. '\0' 是特殊的截断字符， EOF
 /// </summary>
 public class MyString
 {

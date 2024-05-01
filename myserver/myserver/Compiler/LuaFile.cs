@@ -35,5 +35,5 @@ public class LuaFile
 
     private MyString m_content = new MyString();
 
-    private Lex m_lex = new Lex();
+    private LuaLex m_lex = new LuaLex();
 }
