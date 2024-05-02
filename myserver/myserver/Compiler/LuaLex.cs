@@ -38,12 +38,17 @@ public enum TokenType
 
     DIVIDE, // // 整除
     CONCAT,// .. string concat
+    DOTS,// ...
     EQ,// ==
     GE,// >=
     LE,// <=
     NE,// ~=
     SHIFT_LEFT,// <<
     SHIFT_RIGHT,// >>
+
+    QQUESTION,// ??
+
+    DBCOLON, // ::
 
     NUMBER,
     STRING,
@@ -142,6 +147,7 @@ public class LuaLex
 
     public Token GetNextToken()
     {
+        NowToken = _ReadNextToken();
         return NowToken;
     }
 
@@ -151,7 +157,6 @@ public class LuaLex
         _cur_idx = -1;
         _NextChar();// ready for read token
 
-        dollar_mode = false;
         dollar_char = '\0';
         dollar_open_cnt = 0;
     }
@@ -160,6 +165,7 @@ public class LuaLex
     {
         return c == '_' || char.IsAsciiLetter(c);
     }
+
     static bool IsWordLetterOrNumber(char c)
     {
         return c == '_' || char.IsAsciiLetterOrDigit(c);
@@ -169,7 +175,6 @@ public class LuaLex
 
     MyString.Range _content;
 
-    bool dollar_mode;
     char dollar_char;
     int dollar_open_cnt;
 
@@ -290,22 +295,25 @@ public class LuaLex
 
     Token _ReadInDollarString()
     {
-        if (dollar_mode)
-        {
-            dollar_mode = false;// close dollar mode
+        if (_cur_char == '$') {// enter $ mode
+            _NextChar();
             if(_cur_char == '{')
             {
                 dollar_open_cnt = 1;
                 _NextChar();
-                return new Token('{');
+                return _NewToken4OneChar('{', _cur_idx - 1);
             }
             else if (IsWordLetter(_cur_char))
             {
                 return _ReadNameOrKeyword();
             }
+            else if (_cur_char == '$') 
+            {
+                return // todo@xx
+            }
             else
             {
-                return _GenIllegalToken("unexpected symbol in <$string>");
+                return _NewIllegalToken(_cur_idx, 1, "expect $,<alpha>,{ after '$' in <$string>");
             }
         }
         while(_cur_char != dollar_char) {
@@ -331,14 +339,10 @@ public class LuaLex
                     Debug.Fail("should not happend!");
                     _NextChar();
                     break;
-                case '\n':
-                case ' ':
-                case '\f':
-                case '\t':
-                case '\v':
+                case '\n': case ' ': case '\f': case '\t': case '\v':
                     _NextChar();// ignore space
                     break;
-                case '$':
+                case '$':{
                     var tok = _NewTokenForCurChar();
                     _NextChar();
                     if (_cur_char == '"' || _cur_char == '\'')
@@ -356,6 +360,7 @@ public class LuaLex
                         }
                     }
                     return tok;
+                }
                 case '-':
                     _NextChar();
                     if (_cur_char != '-')
@@ -393,9 +398,50 @@ public class LuaLex
                     if (_CheckThenSkip('=')) return _NewTokenByType(TokenType.GE, _cur_idx-2, 2);
                     else if (_CheckThenSkip('>')) return _NewTokenByType(TokenType.SHIFT_RIGHT, _cur_idx -2, 2);
                     else return _NewToken4OneChar('>', _cur_idx - 1);
+                case '/':
+                    _NextChar();
+                    if (_CheckThenSkip('/')) return  _NewTokenByType(TokenType.DIVIDE, _cur_idx-2, 2);
+                    else return _NewToken4OneChar('/', _cur_idx - 1);
+                case '~':
+                    _NextChar();
+                    if (_CheckThenSkip('=')) return _NewTokenByType(TokenType.NE, _cur_idx-2, 2);
+                    else return _NewToken4OneChar('~', _cur_idx - 1);
+                case '?':
+                    _NextChar();
+                    if (_CheckThenSkip('?')) return _NewTokenByType(TokenType.QQUESTION, _cur_idx - 2, 2);
+                    else return _NewToken4OneChar('?', _cur_idx - 1);
+                case ':':
+                    _NextChar();
+                    if (_CheckThenSkip(':')) return _NewTokenByType(TokenType.DBCOLON, _cur_idx - 2, 2);
+                    else return _NewToken4OneChar(':', _cur_idx - 1);
+                case '\'': case '"':
+                    return _ReadString();
+                case '.': /* '.', '..', '...', or number */
+                    _NextChar();
+                    if (_CheckThenSkip('.')){
+                        if (_CheckThenSkip('.')) return _NewTokenByType(TokenType.DOTS, _cur_idx - 3, 3);
+                        else return _NewTokenByType(TokenType.CONCAT, _cur_idx - 2, 2);
+                    }
+                    else if (char.IsDigit(_cur_char)) return _ReadNumber(true);
+                    else return _NewToken4OneChar('.', _cur_idx - 1);
+                default: {
+                    if (char.IsDigit(_cur_char)) return _ReadNumber();
+                    else if (IsWordLetter(_cur_char)) _ReadNameOrKeyword();
+                    else {/* single-char tokens ('+', '*', '%', '{', '}', ...) */
+                        var tok = _NewTokenForCurChar(); // 可能是错误的，由 parser 来 Mark
+                        if (dollar_char != '\0') {
+                            Debug.Assert(dollar_open_cnt > 0);
+                            if ('{' == _cur_char) ++dollar_open_cnt;
+                            else if('}' == _cur_char) --dollar_open_cnt;
+                        }
+                        _NextChar();
+                        return tok;
+                    }
+                    break;
+                }
             }
         }
-        return null;
+        return _NewTokenByType(TokenType.EOF, _cur_idx, 0);
     }
 
     Token _NewTokenForCurChar()
@@ -412,26 +458,41 @@ public class LuaLex
         return tok;
     }
 
-    Token _NewTokenByType(TokenType type, int idx, int lenght)
+    Token _NewTokenByType(TokenType type, int idx, int length)
     {
         var tok = new Token(type);
-        tok.SetMyRange(_content.SubRange(idx, lenght));
+        tok.SetMyRange(_content.SubRange(idx, length));
         return tok;
     }
 
     Token _ReadLongComment()
     {
-
+        return null;
     }
 
     Token _ReadLineComment()
     {
-
+        return null;
     }
 
     Token _ReadRawString()
     {
+        return null;
+    }
 
+    Token _ReadString(){
+        return null;
+    }
+
+    Token _ReadNumber(bool is_start_with_dot = false) {
+        return null;
+    }
+
+    Token _NewIllegalToken(int idx, int length, string msg)
+    {
+        var token = _NewTokenByType(TokenType.Illegal, idx, length);
+        token.MarkError(msg);
+        return token;
     }
 
     Protocol.Position _NowPos()
@@ -447,12 +508,5 @@ public class LuaLex
             msg = msg,
         };
         m_errors.Add(err);
-    }
-
-    Token _GenIllegalToken(string msg)
-    {
-        var token = new Token(TokenType.Illegal);
-        token.str = msg;
-        return token;
     }
 }
