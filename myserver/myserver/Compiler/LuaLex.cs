@@ -17,7 +17,6 @@ public enum Keyword
     ELSE,
     ELSEIF,
     FALSE,
-    FINNALY,
     FOR,
     FUNCTION,
     IF,
@@ -79,7 +78,6 @@ public class Token
     public string err_msg = null;// 如果不为空，说明有错误
 
 
-
     public Token(TokenType tokenType)
     {
         type = (int)tokenType;
@@ -98,6 +96,11 @@ public class Token
     public void MarkError(string msg)
     {
         err_msg = msg;
+    }
+
+    public void SetStr(string str)
+    {
+        this.str = str;
     }
 
     public Token(string str_, bool is_string) {
@@ -293,34 +296,7 @@ public class LuaLex
         }
     }
 
-    Token _ReadInDollarString()
-    {
-        if (_cur_char == '$') {// enter $ mode
-            _NextChar();
-            if(_cur_char == '{')
-            {
-                dollar_open_cnt = 1;
-                _NextChar();
-                return _NewToken4OneChar('{', _cur_idx - 1);
-            }
-            else if (IsWordLetter(_cur_char))
-            {
-                return _ReadNameOrKeyword();
-            }
-            else if (_cur_char == '$') 
-            {
-                return // todo@xx
-            }
-            else
-            {
-                return _NewIllegalToken(_cur_idx, 1, "expect $,<alpha>,{ after '$' in <$string>");
-            }
-        }
-        while(_cur_char != dollar_char) {
-            
-        }
-        return null;
-    }
+
 
 
 
@@ -463,6 +439,41 @@ public class LuaLex
         var tok = new Token(type);
         tok.SetMyRange(_content.SubRange(idx, length));
         return tok;
+    }
+
+    Token _NewToken4String(string msg, int idx, int length) {
+        var tok = _NewTokenByType(TokenType.STRING, idx, length);
+        tok.SetStr(msg);
+        return tok;
+    }
+
+    Token _ReadInDollarString()
+    {
+        if (_cur_char == '$') {// enter $ mode
+            _NextChar();
+            if(_cur_char == '{')
+            {
+                dollar_open_cnt = 1;
+                _NextChar();
+                return _NewToken4OneChar('{', _cur_idx - 1);
+            }
+            else if (IsWordLetter(_cur_char))
+            {
+                return _ReadNameOrKeyword();
+            }
+            else if (_cur_char == '$') 
+            {
+                return // todo@xx
+            }
+            else
+            {
+                return _NewIllegalToken(_cur_idx, 1, "expect $,<alpha>,{ after '$' in <$string>");
+            }
+        }
+        while(_cur_char != dollar_char) {
+            
+        }
+        return null;
     }
 
     Token _ReadLongComment()
