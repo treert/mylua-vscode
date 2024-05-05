@@ -50,9 +50,10 @@ public enum TokenType
 
     DBCOLON, // ::
 
-    NUMBER,
+    NUMBER,// int64 or double
     STRING,
 
+    Commnet,// 注释
     Illegal,// 各类非法输入。
 
     // Name，Must place at last
@@ -214,6 +215,12 @@ public class LuaLex
         return ok;
     }
 
+    bool _Check2ThenSkip(char ch1, char ch2){
+        bool ok = _cur_char == ch1 || _cur_char == ch2;
+        if (ok) _NextChar();
+        return ok;
+    }
+
     Token _ReadNameOrKeyword()
     {
         Debug.Assert(IsWordLetter(_cur_char));
@@ -226,19 +233,7 @@ public class LuaLex
         var token = new Token(_buf.ToString(), false);
         return token;
     }
-
-    // Eat Cur Char Then Try Convert To int
-    uint _TryEatOneHex()
-    {
-        char c = _cur_char;
-        _NextChar();
-        if (Char.IsAsciiHexDigit(c))
-        {
-            return LexUtil.HexToInt(c);
-        }
-        return 255;
-    }
-
+    
     // \ddd
     Token _ReadDigitalEsc(){
         int i = 0;
@@ -480,7 +475,7 @@ public class LuaLex
             switch(_cur_char){
                 case '\0': case '\n':
                     tok.MarkError("unfinished string");
-                    break;
+                    goto finish_read;
                 case '\\': {
                     Token? sub_tok = null;
                     char c = '\0';
@@ -498,7 +493,7 @@ public class LuaLex
                         case '\n': c = '\n'; goto save_one_char;
                         case '\\': case '\'': case '\"':
                             c = _cur_char; goto save_one_char;
-                        case '\0': goto no_save;// 意外结束了。
+                        case '\0': goto no_save;// 意外结束
                         case 'z':{ /* zap following span of spaces */
                             _NextChar();
                             int zap_num = 2;
@@ -515,6 +510,7 @@ public class LuaLex
                         }
                     }
                     save_one_char:
+                        _NextChar();
                         sub_tok = _NewToken4String(c.ToString(), _cur_idx-2, 2);
                     save_tok:
                         tok.AddSubToken(sub_tok);
@@ -526,6 +522,7 @@ public class LuaLex
                     break;
             }
         }
+        finish_read:
         tok.SetMyRange(_content.SubRange(start_idx, _cur_idx-start_idx));
         return tok;
     }
@@ -575,43 +572,129 @@ public class LuaLex
         return tok;
     }
 
+    int _SkipSep(){
+        char s = _cur_char;
+        Debug.Assert(s == '[' || s == ']');
+        _NextChar();
+        int count = 0;
+        while(_cur_char == '=') _NextChar();
+
+        if (_cur_char == s){
+            return count + 2;
+        }
+        else{
+            return count == 0 ? 1 : 0;
+        }
+    }
+
+    void _SkipLongStringUtil(int sep){
+        Debug.Assert(_cur_char == '[' && sep >= 2);
+        for(;;){
+            _NextChar();
+            if(_cur_char == ']'){
+                if(_SkipSep() == sep){
+                    return;// success end
+                }
+            }
+            else if (_cur_char == '\0') {
+                return;
+            }
+        }
+    }
+
+    // --[[ xxx ]]
     Token _ReadLongComment()
     {
-        return null;
+        Debug.Assert(_cur_char == '[');
+        int start_idx = _cur_idx - 2;
+        int sep = _SkipSep();
+        if (sep >= 2){
+            _SkipLongStringUtil(sep);
+        }
+        else{ // line comment
+            return _ReadLineComment(start_idx);
+        }
+        if (_cur_char == ']'){
+            _NextChar();
+            var tok = new Token(TokenType.Commnet);
+            tok.SetMyRange(_content.SubRange(start_idx, _cur_idx - start_idx));
+            return tok;
+        }
+        else{
+            Debug.Assert(_cur_char == '\0');
+            var tok = new Token(TokenType.STRING);
+            tok.SetMyRange(_content.SubRange(start_idx, _cur_idx - start_idx));
+            tok.MarkError("unfinished long comment");
+            return tok;
+        }
     }
 
-    Token _ReadLineComment()
+    // -- comment
+    Token _ReadLineComment(int start_idx = -1)
     {
-        return null;
+        if (start_idx < 0){
+            start_idx = _cur_idx - 2;
+        }
+        while (_cur_char != '\0' && _cur_char != '\n') {
+            _NextChar();
+        }
+        var tok = new Token(TokenType.Commnet);
+        tok.SetMyRange(_content.SubRange(start_idx, _cur_idx - start_idx));
+        return tok;
     }
 
+    // [=*[ xxx ]=*]
     Token _ReadRawString()
     {
-        return null;
+        Debug.Assert(_cur_char == '[' || _cur_char == '=');
+        int start_idx = _cur_idx - 1;
+        int sep = _SkipSep();
+        if (sep >= 2){
+            _SkipLongStringUtil(sep);
+        }
+        if (_cur_char == ']'){
+            _NextChar();
+            var tok = new Token(TokenType.STRING);
+            tok.SetMyRange(_content.SubRange(start_idx, _cur_idx - start_idx));
+            return tok;
+        }
+        else{
+            Debug.Assert(_cur_char == '\0');
+            var tok = new Token(TokenType.STRING);
+            tok.SetMyRange(_content.SubRange(start_idx, _cur_idx - start_idx));
+            tok.MarkError("unfinished long string");
+            return tok;
+        }
     }
 
     Token _ReadString(){
-        return null;
+        char del = _cur_char;
+        _NextChar();
+        var tok = _ReadLineStringUtil(del, del);
+        if (_cur_char == del){
+            _NextChar();
+        }
+        else{
+            // 字符串没有正确结束
+        }
+        return tok;
     }
 
+    // %d(%x|%.|([Ee][+-]?))* | 0[Xx](%x|%.|([Pp][+-]?))*
+    // 参考lua 实现比lua还贪心
     Token _ReadNumber(bool is_start_with_dot = false) {
-        return null;
-    }
+        Debug.Assert(char.IsAsciiDigit(_cur_char));
+        int start_idx = _cur_idx;
+        if (is_start_with_dot){
+            start_idx -= 1;
+            Debug.Assert(_content[start_idx] == '.');
+        }
+        do{
+            _NextChar();
+        }while(_cur_char == '.' || char.IsAsciiLetterLower(_cur_char));
 
-
-
-    Protocol.Position _NowPos()
-    {
-        return _content.RawString.GetPosByOffset(_cur_idx);
-    }
-
-    void ErrorHappen(string msg)
-    {
-        var err = new LexError
-        {
-            pos = _NowPos(),
-            msg = msg,
-        };
-        m_errors.Add(err);
+        var tok = new Token(TokenType.NUMBER);
+        tok.SetMyRange(_content.SubRange(start_idx, _cur_idx - start_idx));
+        return tok;
     }
 }
