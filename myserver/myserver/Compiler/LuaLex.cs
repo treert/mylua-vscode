@@ -1,6 +1,7 @@
 ﻿using MyServer.Misc;
 using System;
 using System.Collections.Generic;
+using System.Data.Common;
 using System.Diagnostics;
 using System.Linq;
 using System.Text;
@@ -76,6 +77,7 @@ public class Token
     public MyString.Range my_range;
 
     public string err_msg = null;// 如果不为空，说明有错误
+    public List<Token> m_sub_toks = null;
 
 
     public Token(TokenType tokenType)
@@ -101,6 +103,11 @@ public class Token
     public void SetStr(string str)
     {
         this.str = str;
+    }
+
+    public void AddSubToken(Token tok){
+        if (m_sub_toks == null) m_sub_toks = new List<Token>();
+        m_sub_toks.Add(tok);
     }
 
     public Token(string str_, bool is_string) {
@@ -232,73 +239,85 @@ public class LuaLex
         return 255;
     }
 
-    // \xdd
-    char _ReadHexEsc()
-    {
-        _NextChar();// skip x
-        uint x1 = _TryEatOneHex();
-        uint x2 = _TryEatOneHex();
-        return '1';
-
-    }
-
-    // \u{aabbccdd}
-    char _ReadUnicodeEsc()
-    {
-        return '1';
-    }
-
-    void _ReadStringAndAddToBuffer(char del1, char del2)
-    {
-        while(_cur_char != del1 && _cur_char != del2)
-        {
-            switch(_cur_char)
-            {
-                case '\0':
-                    ErrorHappen("unfinished string. reach EOF.");
-                    return;
-                case '\n':
-                    ErrorHappen("unfinished string. reach end of line.");
-                    return;
-                case '\\':
-                    {
-                        char c = '\0'; /* final character to be saved */
-                        _NextChar();
-                        switch (_cur_char)
-                        {
-                            case 'a': c = '\a'; goto read_save;
-                            case 'b': c = '\b'; goto read_save;
-                            case 'f': c = '\f'; goto read_save;
-                            case 'n': c = '\n'; goto read_save;
-                            case 'r': c = '\r'; goto read_save;
-                            case 't': c = '\t'; goto read_save;
-                            case 'v': c = '\v'; goto read_save;
-                            case 'x': _ReadHexEsc(); goto no_save;
-                            case 'u': _ReadUnicodeEsc(); goto no_save;
-                            case '\n': c = '\n'; goto save;
-                            case '\\': case '\"': case '\'':
-                                c = _cur_char; goto save;
-                            case '\0': goto no_save; /* will raise an error next loop */
-                        }
-                    read_save:
-                        _NextChar();
-                    save:
-                        _buf.Append(c);
-                    no_save:
-                        break;
-                    }
-                default:
-                    _buf.Append(_cur_char);
-                    _NextChar();
-                    break;
-            }
-
+    // \ddd
+    Token _ReadDigitalEsc(){
+        int i = 0;
+        int r = 0;
+        for (i = 0; i < 3 && char.IsAsciiDigit(_cur_char); i++) {
+            r = r*10 + _cur_char - '0';
+            _NextChar();
+        }
+        if (i == 0){
+            return _NewIllegalToken(_cur_idx - 1, 1, "expect digital after '\\' in format '\\ddd'");
+        }
+        else if (r <= 0xff){
+            char c = (char)r;
+            return _NewToken4String(c.ToString(), _cur_idx - 1 - i, 1+i);
+        }
+        else{
+            return _NewIllegalToken(_cur_idx - 1-i, 1+i, "too large in format '\\ddd'");
         }
     }
 
+    // \xdd
+    Token _ReadHexEsc()
+    {
+        _NextChar();// skip x
+        int x = 0;
+        int valid_num = 0;
+        if(char.IsAsciiHexDigit(_cur_char)){
+            x = LexUtil.HexToInt(_cur_char);
+            valid_num ++;
+            _NextChar();
+            if(char.IsAsciiHexDigit(_cur_char)){
+                x = (x<<4) + LexUtil.HexToInt(_cur_char);
+                valid_num ++;
+                _NextChar();
+            }
+        }
+        if(valid_num == 2){
+            char cc = (char)x;
+            return _NewToken4String(cc.ToString(), _cur_idx-4, 4);
+        }
+        return _NewIllegalToken(_cur_idx - 2 - valid_num, 2 + valid_num, "invalid \xdd");
+    }
 
-
-
+    // \u{aabbccdd}
+    Token _ReadUnicodeEsc()
+    {
+        _NextChar();// skip u
+        if (_CheckThenSkip('{')){
+            int valid_num = 0;
+            int x = 0;
+            bool utf8_ok = true;
+            while(char.IsAsciiHexDigit(_cur_char)){
+                utf8_ok &= (x <= (0x7FFFFFFFu >> 4));
+                x = (x<<4) + LexUtil.HexToInt(_cur_char);
+                valid_num ++;
+                _NextChar();
+            }
+            if(_CheckThenSkip('}')){
+                if(utf8_ok && valid_num > 0){
+                    try{
+                        string cc = char.ConvertFromUtf32(x);
+                        return _NewToken4String(cc, _cur_idx - 4 - valid_num, 4+valid_num);
+                    }
+                    catch{
+                        return _NewIllegalToken( _cur_idx - 4 - valid_num, 4+valid_num, "invalid utf8 code");
+                    }
+                }
+                else{
+                    return _NewIllegalToken( _cur_idx - 4 - valid_num, 4+valid_num, "invalid utf string");
+                }
+            }
+            else{
+                return _NewIllegalToken(_cur_idx-3-valid_num, 3+valid_num, "expect valid utf str '\\u{XXXX}'");
+            }
+        }
+        else{
+            return _NewIllegalToken(_cur_idx-2, 2, "expect '{' after '\\u'");
+        }
+    }
 
     Token _ReadNextToken()
     {
@@ -447,8 +466,73 @@ public class LuaLex
         return tok;
     }
 
+    Token _NewIllegalToken(int idx, int length, string msg)
+    {
+        var token = _NewTokenByType(TokenType.Illegal, idx, length);
+        token.MarkError(msg);
+        return token;
+    }
+
+    Token _ReadLineStringUtil(char del1, char del2){
+        var tok = new Token(TokenType.STRING);
+        int start_idx = _cur_idx;
+        while (_cur_char != del1 && _cur_char != del2) {
+            switch(_cur_char){
+                case '\0': case '\n':
+                    tok.MarkError("unfinished string");
+                    break;
+                case '\\': {
+                    Token? sub_tok = null;
+                    char c = '\0';
+                    _NextChar();
+                    switch(_cur_char){
+                        case 'a': c = '\a'; goto save_one_char;
+                        case 'b': c = '\b'; goto save_one_char;
+                        case 'f': c = '\f'; goto save_one_char;
+                        case 'n': c = '\n'; goto save_one_char;
+                        case 'r': c = '\r'; goto save_one_char;
+                        case 't': c = '\t'; goto save_one_char;
+                        case 'v': c = '\v'; goto save_one_char;
+                        case 'x': sub_tok = _ReadHexEsc(); goto save_tok;
+                        case 'u': sub_tok = _ReadUnicodeEsc(); goto save_tok;
+                        case '\n': c = '\n'; goto save_one_char;
+                        case '\\': case '\'': case '\"':
+                            c = _cur_char; goto save_one_char;
+                        case '\0': goto no_save;// 意外结束了。
+                        case 'z':{ /* zap following span of spaces */
+                            _NextChar();
+                            int zap_num = 2;
+                            while(char.IsWhiteSpace(_cur_char)){
+                                _NextChar();
+                                zap_num++;
+                            }
+                            sub_tok = _NewToken4String("", _cur_idx - zap_num, zap_num);
+                            goto save_tok;
+                        }
+                        default:{
+                            sub_tok = _ReadDigitalEsc();
+                            goto save_tok;
+                        }
+                    }
+                    save_one_char:
+                        sub_tok = _NewToken4String(c.ToString(), _cur_idx-2, 2);
+                    save_tok:
+                        tok.AddSubToken(sub_tok);
+                    no_save:
+                    break;
+                }
+                default:
+                    _NextChar();
+                    break;
+            }
+        }
+        tok.SetMyRange(_content.SubRange(start_idx, _cur_idx-start_idx));
+        return tok;
+    }
+
     Token _ReadInDollarString()
     {
+        Debug.Assert(dollar_char != '\0' && dollar_open_cnt == 0);
         if (_cur_char == '$') {// enter $ mode
             _NextChar();
             if(_cur_char == '{')
@@ -463,17 +547,32 @@ public class LuaLex
             }
             else if (_cur_char == '$') 
             {
-                return // todo@xx
+                _NextChar();
+                return _NewToken4String("$", _cur_idx - 2, 2);
+            }
+            else if (_cur_char == dollar_char){
+                dollar_char = '\0';// 结束了
+                _NextChar();
+                return _NewToken4String("$", _cur_idx - 2, 1);// 允许 $ 结尾 
             }
             else
             {
-                return _NewIllegalToken(_cur_idx, 1, "expect $,<alpha>,{ after '$' in <$string>");
+                // 只吃掉前面的 $
+                return _NewIllegalToken(_cur_idx-1, 1, "expect $,<alpha>,{ after '$' in <$string>");
             }
         }
-        while(_cur_char != dollar_char) {
-            
+        
+        var tok = _ReadLineStringUtil(dollar_char, '$');
+        if (_cur_char == dollar_char) {
+            dollar_char = '\0';
+            _NextChar();
+            return tok;
         }
-        return null;
+        else if(_cur_char == '\0' || _cur_char == '\n') {
+            // 意外结束了。
+            dollar_char = '\0';
+        }
+        return tok;
     }
 
     Token _ReadLongComment()
@@ -499,12 +598,7 @@ public class LuaLex
         return null;
     }
 
-    Token _NewIllegalToken(int idx, int length, string msg)
-    {
-        var token = _NewTokenByType(TokenType.Illegal, idx, length);
-        token.MarkError(msg);
-        return token;
-    }
+
 
     Protocol.Position _NowPos()
     {

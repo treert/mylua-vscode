@@ -58,7 +58,7 @@ public static class LexUtil
         255, 255, 255, 255, 255, 255, 255, 10, 11, 12,
         13, 14, 15
     };
-    public static uint HexToInt(char c)
+    public static int HexToInt(char c)
     {
         int v = c;
         if (v < CharToHexLookup.Length)
