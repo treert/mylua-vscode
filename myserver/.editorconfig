@@ -27,6 +27,9 @@ csharp_style_expression_bodied_lambdas = true:silent
 csharp_style_expression_bodied_local_functions = false:silent
 csharp_style_prefer_primary_constructors = true:suggestion
 
+# CS8603: Possible null reference return.
+dotnet_diagnostic.CS8603.severity = silent
+
 [*.{cs,vb}]
 #### Naming styles ####
 

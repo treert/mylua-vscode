@@ -13,7 +13,7 @@ public enum Keyword
 {
     AND = TokenType.NAME + 1,// 搞不懂了，一方面不支持enum隐式转换成int，一方面又允许这种语法
     BREAK,
-    CONTINUE,// break and continue use exception to implement
+    CONTINUE,// mylua 特殊支持
     DO,
     ELSE,
     ELSEIF,
