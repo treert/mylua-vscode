@@ -58,7 +58,7 @@ public class MyString
     }
 
     private char[] _items = s_emptyArray;
-    private List<int> _line_offsets = new List<int>();
+    private List<int> _line_offsets = [];
     private int _size = 0;
     private static readonly char[] s_emptyArray = new char[0];
     public const int MaxSupportCount = 0x7FFFFFC7;//  2,147,483,591 from dotnet

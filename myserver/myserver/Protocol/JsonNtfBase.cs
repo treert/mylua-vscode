@@ -20,8 +20,10 @@ public abstract class JsonNtfBase
     public virtual void SendNotify()
     {
         My.Logger.Debug($"SendNotify {m_method}");
-        JsonObject data = new();
-        data["method"] = m_method;
+        JsonObject data = new()
+        {
+            ["method"] = m_method
+        };
         JsonRpcMgr.Instance.SendData(data);
     }
 }
@@ -47,8 +49,10 @@ public abstract class JsonNtfBase<TArgs> : JsonNtfBase where TArgs : class,new()
     public override sealed void SendNotify()
     {
         My.Logger.Debug($"SendNotify {m_method}");
-        JsonObject data = new();
-        data["method"] = m_method;
+        JsonObject data = new()
+        {
+            ["method"] = m_method
+        };
         if (m_args is not null)
         {
             data["params"] = m_args.ToJsonNode();

@@ -11,7 +11,7 @@ public class MyLuaFile
     /// <summary>
     /// 数据结构以后再重新设计。这次关注功能
     /// </summary>
-    List<char[]> m_contents = new List<char[]>();
+    List<char[]> m_contents = [];
 
     public void Init(string full_content)
     {

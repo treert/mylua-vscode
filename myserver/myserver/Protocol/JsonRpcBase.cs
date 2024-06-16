@@ -149,8 +149,10 @@ namespace MyServer.Protocol
 
         public override sealed void SendResponse()
         {
-            var data = new JsonObject();
-            data["id"] = m_id.ToJsonNode();
+            var data = new JsonObject
+            {
+                ["id"] = m_id.ToJsonNode()
+            };
             if (m_err != null)
             {
                 My.Logger.Debug($"rpc.SendResponse id={m_id} {m_method}-Error");

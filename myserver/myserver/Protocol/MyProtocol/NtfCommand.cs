@@ -11,7 +11,7 @@ namespace MyServer.Protocol;
 public class CommandParams
 {
     public string command { get; set; }
-    public JsonArray args { get; set; } = new JsonArray();
+    public JsonArray args { get; set; } = [];
 }
 
 [MyProto(Direction = ProtoDirection.ToClient)]

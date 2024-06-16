@@ -16,11 +16,21 @@ public abstract class ExpSyntaxTree : SyntaxTree
 
 }
 
+/*
+注释带有类型信息。需要更好的维护。
+*/
+public abstract class LuaCommentBase : SyntaxTree{
+    public bool IsValid{get;} 
+
+}
+
 #region Lua SyntaxTree
+
+
 
 public class BlockTree : SyntaxTree
 {
-    public List<SyntaxTree> statements = new List<SyntaxTree>();
+    public List<SyntaxTree> statements = [];
 }
 
 public class FunctionBody : SyntaxTree
@@ -31,7 +41,7 @@ public class FunctionBody : SyntaxTree
 
 public class ParamList: SyntaxTree
 {
-    public List<Token> name_list = new List<Token>();
+    public List<Token> name_list = [];
     public Token kw_name = null;
     public bool is_vararg = false;
 }
@@ -75,7 +85,7 @@ public class ForStatement : SyntaxTree
 
 public class ForInStatement : SyntaxTree
 {
-    public List<Token> names = new List<Token>();
+    public List<Token> names = [];
     public ExpSyntaxTree exp;
     public BlockTree block;
 }
@@ -88,7 +98,7 @@ public class FunctionStatement : SyntaxTree
 
 public class AssignStatement : SyntaxTree
 {
-    public List<ExpSyntaxTree> var_list = new List<ExpSyntaxTree>();
+    public List<ExpSyntaxTree> var_list = [];
     public ExpressionList exp_list;
 }
 
@@ -112,7 +122,7 @@ public class UnaryExpression : SyntaxTree
 
 public class TableDefine : ExpSyntaxTree
 {
-    public List<TableField> fields = new List<TableField>();
+    public List<TableField> fields = [];
 }
 
 public class TableField : ExpSyntaxTree
@@ -140,23 +150,31 @@ public class ArgsList : SyntaxTree
         public Token k;// name
         public ExpSyntaxTree w;
     }
-    public List<ExpSyntaxTree> arg_list = new List<ExpSyntaxTree>();
-    public List<KW> kw_list = new List<KW>();
-    public List<ExpSyntaxTree> extra_args = new List<ExpSyntaxTree>();
+    public List<ExpSyntaxTree> arg_list = [];
+    public List<KW> kw_list = [];
+    public List<ExpSyntaxTree> extra_args = [];
 }
 
 public class ExpressionList : ExpSyntaxTree
 {
-    public List<ExpSyntaxTree> exp_list = new List<ExpSyntaxTree>();
+    public List<ExpSyntaxTree> exp_list = [];
 }
 
 public class DollarString : ExpSyntaxTree
 {
+    // $string 内部元素，3选一
     public class DollarItem{
         public Token? name;
         public Token? str;
         public ExpSyntaxTree? exp;
     }
+    public List<DollarItem> items = [];
 }
+
+public class DollarFunction : ExpSyntaxTree
+{
+    public FunctionBody body;
+}
+
 
 #endregion

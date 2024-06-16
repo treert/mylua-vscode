@@ -107,7 +107,7 @@ public class Token
     }
 
     public void AddSubToken(Token tok){
-        if (m_sub_toks == null) m_sub_toks = new List<Token>();
+        if (m_sub_toks == null) m_sub_toks = [];
         m_sub_toks.Add(tok);
     }
 
@@ -130,7 +130,7 @@ public class Token
         }
     }
 
-    static Dictionary<string, Keyword> keywords = new Dictionary<string, Keyword>();
+    static Dictionary<string, Keyword> keywords = [];
     static Token()
     {
         var arr = Enum.GetValues(typeof(Keyword));

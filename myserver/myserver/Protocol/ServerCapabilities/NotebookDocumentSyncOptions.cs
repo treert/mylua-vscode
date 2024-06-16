@@ -41,7 +41,7 @@ public class NotebookDocumentSyncOptions
     /// <summary>
     /// The notebooks to be synced
     /// </summary>
-    public List<_NotebookSelector> notebookSelector { get; set; } = new();
+    public List<_NotebookSelector> notebookSelector { get; set; } = [];
     /// <summary>
     /// Whether save notification should be forwarded to the server.
     /// Will only be honored if mode === `notebook`.

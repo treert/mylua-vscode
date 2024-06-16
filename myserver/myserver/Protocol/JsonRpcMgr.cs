@@ -90,11 +90,15 @@ namespace MyServer.Protocol
 
         public void SendErrorForRPC(MyId id, int code, string? msg)
         {
-            var data = new JsonObject();
-            data["id"] = id.ToJsonNode();
-            var err = new JsonObject();
-            err["code"] = code;
-            err["message"] = msg;
+            var data = new JsonObject
+            {
+                ["id"] = id.ToJsonNode()
+            };
+            var err = new JsonObject
+            {
+                ["code"] = code,
+                ["message"] = msg
+            };
             data["error"] = err;
             SendData(data);
         }
@@ -229,14 +233,14 @@ namespace MyServer.Protocol
         /// <summary>
         /// server request. wait for client res.
         /// </summary>
-        private Dictionary<MyId, JsonRpcBase> m_server_rpc_map = new();
+        private Dictionary<MyId, JsonRpcBase> m_server_rpc_map = [];
         /// <summary>
         /// 处理rpc的类型
         /// </summary>
-        private Dictionary<string, Type> m_rpc_type_map = new Dictionary<string, Type>();
+        private Dictionary<string, Type> m_rpc_type_map = [];
         /// <summary>
         /// 处理notfiy的类型
         /// </summary>
-        private Dictionary<string, Type> m_notify_type_map = new Dictionary<string, Type>();
+        private Dictionary<string, Type> m_notify_type_map = [];
     }
 }
