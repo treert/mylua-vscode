@@ -20,6 +20,7 @@ public enum Keyword
     FALSE,
     FOR,
     FUNCTION,
+    GOTO,
     IF,
     IN,
     LOCAL,
@@ -151,15 +152,38 @@ public class LexError
 
 public class LuaLex
 {
-    public List<LexError> m_errors;
-    public Token NowToken { get;private set; } = new Token(TokenType.EOF);
-
+    public Token CurrentToken => _current_token;
     public bool IsInDollarString => dollar_char != '\0' && dollar_open_cnt == 0;
 
-    public Token GetNextToken()
-    {
-        NowToken = _ReadNextToken();
-        return NowToken;
+    private Token _current_token = new Token(TokenType.EOF);
+    private Token _look_ahead_token = null;
+    private Token _look_ahead2_token = null;
+
+    // 阅读下一个Token，会往前推进一步。
+    public Token NextToken(){
+        if (_look_ahead_token != null){
+            _current_token = _look_ahead_token;
+            _look_ahead_token = _look_ahead2_token;
+            _look_ahead2_token = null;
+        } else {
+            _current_token = _ReadNextToken();
+        }
+        return _current_token;
+    }
+
+    public Token LookAhead(){
+        if (_look_ahead_token is null){
+            _look_ahead_token = _ReadNextToken();
+        }
+        return _look_ahead_token;
+    }
+
+    public Token LookAhead2(){
+        LookAhead();
+        if (_look_ahead2_token is null){
+            _look_ahead2_token = _ReadNextToken();
+        }
+        return _look_ahead2_token;
     }
 
     public void Init(MyString.Range content)
@@ -170,6 +194,10 @@ public class LuaLex
 
         dollar_char = '\0';
         dollar_open_cnt = 0;
+
+        _current_token = new Token(TokenType.EOF);
+        _look_ahead_token = null;
+        _look_ahead2_token = null;
     }
 
     static bool IsWordLetter(char c)
