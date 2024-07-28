@@ -57,8 +57,48 @@ public class LuaParser {
         NextToken();// if or elseif
         var statement = new IfStatement();
         var exp = ParseExp();
-        if 
+        var true_branch = ParseBlock();
+        var false_branch = ParseFalseBranchStatement();
 
+        statement.exp = exp;
+        statement.true_branch = true_branch;
+        statement.false_branch = false_branch;
+        return statement;
+    }
+
+    SyntaxTree? ParseFalseBranchStatement()
+    {
+        if (LookAhead().Match(Keyword.ELSEIF)){
+            return ParseIfStatement();
+        }
+        else if (LookAhead().Match(Keyword.ELSE))
+        {
+            NextToken();
+            var block = ParseBlock();
+            CheckAndNext(Keyword.END);
+            return block;
+        }
+        else{
+            // expect 'end' for 'if'
+            CheckAndNext(Keyword.END);
+            return null;
+        }
+    }
+
+    void CheckAndNext(Keyword keyword)
+    {
+        var ahead = LookAhead();
+        if (ahead.Match(keyword))
+        {
+            NextToken();
+            return;
+        }
+        ThrowParseException($"expect {keyword.ToString().ToLower()}");
+    }
+
+    ExpSyntaxTree ParseExp()
+    {
+        return null;
     }
 
     FunctionBody ParseModule(){
@@ -81,7 +121,9 @@ public class LuaParser {
         return _lex.NextToken();
     }
 
-    private 
+    private void ThrowParseException(string message){
+        throw new ParseException(message);
+    }
 
     private LuaLex _lex = new LuaLex();
 

@@ -71,7 +71,7 @@ public class IfStatement : SyntaxTree
 {
     public ExpSyntaxTree exp;
     public BlockTree true_branch;
-    public SyntaxTree false_branch;
+    public SyntaxTree? false_branch;
 }
 
 public class ForStatement : SyntaxTree

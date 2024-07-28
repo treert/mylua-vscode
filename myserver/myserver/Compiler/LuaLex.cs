@@ -17,6 +17,7 @@ public enum Keyword
     DO,
     ELSE,
     ELSEIF,
+    END,
     FALSE,
     FOR,
     FUNCTION,
@@ -90,6 +91,31 @@ public class Token
     public Token(char c)
     {
         type = (int)c;
+    }
+
+    public bool Match(char char_)
+    {
+        return type == (int)char_;
+    }
+
+    public bool Match(char ch1, char ch2)
+    {
+        return type == (int)ch1 || type == (int)ch2;
+    }
+
+    public bool Match(char ch1, char ch2, char ch3)
+    {
+        return type == (int)ch1 || type == (int)ch2 || type == (int)ch3;
+    }
+
+    public bool Match(TokenType type_)
+    {
+        return type == (int)type_;
+    }
+
+    public bool Match(Keyword key)
+    {
+        return type == (int)key;
     }
 
     public void SetMyRange(MyString.Range range)

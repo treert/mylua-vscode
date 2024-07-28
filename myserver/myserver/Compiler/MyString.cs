@@ -45,8 +45,14 @@ public class MyString
         }
         public override string ToString()
         {
-            return new string(m_str._items, m_start, Length);
+            return new string(m_str._items, m_start, m_length);
         }
+
+        // public override int GetHashCode()
+        // {
+        //     ReadOnlySpan<char> chars = new ReadOnlySpan<char>(m_str._items, m_start, m_length);
+        //     return string.GetHashCode(chars);
+        // }
 
         public Range SubRange(int start, int length)
         {
