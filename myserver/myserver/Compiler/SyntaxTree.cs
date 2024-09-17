@@ -42,7 +42,6 @@ public class FunctionBody : SyntaxTree
 public class ParamList: SyntaxTree
 {
     public List<Token> name_list = [];
-    public Token kw_name = null;
     public bool is_vararg = false;
 }
 
@@ -74,7 +73,7 @@ public class IfStatement : SyntaxTree
     public SyntaxTree? false_branch;
 }
 
-public class ForStatement : SyntaxTree
+public class ForNumStatement : SyntaxTree
 {
     public Token name;
     public ExpSyntaxTree exp_init;
@@ -86,7 +85,7 @@ public class ForStatement : SyntaxTree
 public class ForInStatement : SyntaxTree
 {
     public List<Token> names = [];
-    public ExpSyntaxTree exp;
+    public ExpressionList exp_list;
     public BlockTree block;
 }
 

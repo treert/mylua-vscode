@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using NLog.LayoutRenderers.Wrappers;
 
 namespace MyServer.Compiler;
 
@@ -85,15 +86,139 @@ public class LuaParser {
         }
     }
 
-    void CheckAndNext(Keyword keyword)
+    BlockTree ParseDoStatement()
+    {
+        NextToken();// Skip 'do'
+        var statement = ParseBlock();
+        CheckAndNext(Keyword.END);
+        return statement;
+    }
+
+    WhileStatement ParseWhileStatement()
+    {
+        NextToken();// skip 'while'
+        var statement = new WhileStatement();
+        var exp = ParseExp();
+        CheckAndNext(Keyword.DO);
+        var block = ParseBlock();
+        CheckAndNext(Keyword.END);
+
+        statement.exp = exp;
+        statement.block = block;
+        return statement;
+    }
+
+    SyntaxTree ParseForStatement()
+    {
+        NextToken();// skip 'for'
+
+        if(LookAhead().Match(TokenType.NAME)){
+            ThrowParseException($"expect 'id' after 'for'");
+        }
+        if (LookAhead2().Match('=')){
+            return ParseForNumStatement();
+        }
+        else
+        {
+            return ParseForInStatement();
+        }
+    }
+
+    ForNumStatement ParseForNumStatement()
+    {
+        var statement = new ForNumStatement();
+        var name = NextToken();
+        NextToken();// skip '='
+
+        statement.name = name;
+        statement.exp_init = ParseExp();
+        if(!LookAhead().Match(','))
+        {
+            ThrowParseException("expect ',' in for-num-statement");
+        }
+        NextToken();// skip ','
+        statement.exp_limit = ParseExp();
+        if(LookAhead().Match(','))
+        {
+            NextToken();
+            statement.exp_step = ParseExp();
+        }
+
+        CheckAndNext(Keyword.DO);
+        statement.block = ParseBlock();
+        CheckAndNext(Keyword.END);
+        return statement;
+    }
+
+    ForInStatement ParseForInStatement()
+    {
+        var statement = new ForInStatement();
+        statement.names = ParseNameList();
+        CheckAndNext(Keyword.IN);
+        statement.exp_list = ParseExpList();
+        CheckAndNext(Keyword.DO);
+        statement.block = ParseBlock();
+        CheckAndNext(Keyword.END);
+        return statement;
+    }
+
+    List<Token> ParseNameList()
+    {
+        var list = new List<Token>();
+        list.Add(NextToken());
+        while(LookAhead().Match(','))
+        {
+            NextToken();
+            if(LookAhead().Match(TokenType.NAME))
+            {
+                ThrowParseException("expect 'id' after ','");
+            }
+            list.Add(NextToken());
+        }
+        return list;
+    }
+
+    FunctionStatement ParseFunctionStatement()
+    {
+        NextToken();// skip 'function'
+        var statement = new FunctionStatement();
+        statement.names = ParseNameList();
+        statement.func_body = ParseFunctionBody();
+    }
+
+    List<Token> ParseFunctionName()
+    {
+        if (LookAhead().Match(TokenType.NAME) == false){
+            ThrowParseException("expect 'id' after 'function'");
+        }
+        var list = new List<Token>();
+        list.Add(NextToken());
+        while(LookAhead().Match('.'))
+        {
+            NextToken();
+            if(LookAhead().Match(TokenType.NAME))
+            {
+                ThrowParseException("unexpect token in function name after '.'");
+            }
+            list.Add(NextToken());
+        }
+        return list;
+    }
+
+    FunctionBody ParseFunctionBody()
+    {
+        
+    }
+
+    Token? CheckAndNext(Keyword keyword)
     {
         var ahead = LookAhead();
         if (ahead.Match(keyword))
         {
-            NextToken();
-            return;
+            return NextToken();
         }
         ThrowParseException($"expect {keyword.ToString().ToLower()}");
+        return null;
     }
 
     ExpSyntaxTree ParseExp()
@@ -101,8 +226,15 @@ public class LuaParser {
         return null;
     }
 
+    ExpressionList ParseExpList()
+    {
+        return null;
+    }
+
     FunctionBody ParseModule(){
-        var block = new BlockTree();
+        return null;
+
+
     }
     public SyntaxTree Parse(MyString.Range content){
         _lex.Init(content);
