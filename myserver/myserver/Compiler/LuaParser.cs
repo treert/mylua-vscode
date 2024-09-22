@@ -40,7 +40,7 @@ public class LuaParser {
                     statement = ParseContinueStatement(); break;
                 case (int)Keyword.GOTO:
                     statement = ParseGotoStatement(); break;
-                case (int)TokenType.REPEAT:
+                case (int)Keyword.REPEAT:
                     statement = ParseRepeatStatement(); break;
                 default:
                     statement = ParseOtherStatement();
@@ -184,6 +184,7 @@ public class LuaParser {
         var statement = new FunctionStatement();
         statement.names = ParseNameList();
         statement.func_body = ParseFunctionBody();
+        return statement;
     }
 
     List<Token> ParseFunctionName()
@@ -207,7 +208,42 @@ public class LuaParser {
 
     FunctionBody ParseFunctionBody()
     {
-        
+        return null;
+    }
+
+    SyntaxTree ParseLocalStatement()
+    {
+        return null;
+    }
+
+    SyntaxTree ParseReturnStatement()
+    {
+        return null;
+    }
+
+    SyntaxTree ParseBreakStatement()
+    {
+        return null;
+    }
+
+    SyntaxTree ParseContinueStatement()
+    {
+        return null;
+    }
+
+    SyntaxTree ParseGotoStatement()
+    {
+        return null;
+    }
+
+    SyntaxTree ParseRepeatStatement()
+    {
+        return null;
+    }
+
+    SyntaxTree ParseOtherStatement()
+    {
+        return null;
     }
 
     Token? CheckAndNext(Keyword keyword)
@@ -259,4 +295,36 @@ public class LuaParser {
 
     private LuaLex _lex = new LuaLex();
 
+}
+
+
+/*
+新的想法：先用1-2个pass初步吧 Token List 分解成语法树半成品，然后在细处理每个语法树节点。
+
+未想好的地方：
+1. 代码如何组织的问题。
+2. 对于在中间修改源文件的情况如何高效实现。【这个更难一点】
+*/
+public class LuaTokenRange{
+    public void XX(MyString.Range content){
+        List<Token> tokens= new List<Token>();
+        var lex = new LuaLex();
+        lex.Init(content);
+        Token pre_tok = new Token(TokenType.EOF);
+        for(;;){
+            var tok = lex.NextToken();
+            tokens.Add(tok);
+            if (tok.IsKeyword() && pre_tok.Match('.')) {
+                tok.MarkToStr();
+            }
+            else if(tok.Match('=') && pre_tok.IsKeyword()){
+                // 这儿讨巧了。有副作用，但是不会影响正常的流程。
+                pre_tok.MarkToStr();
+            }
+            if (tok.Match(TokenType.EOF)){
+                break;
+            }
+        }
+
+    }
 }

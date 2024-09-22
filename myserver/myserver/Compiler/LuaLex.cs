@@ -118,6 +118,11 @@ public class Token
         return type == (int)key;
     }
 
+    public bool IsKeyword()
+    {
+        return type >= (int) Keyword.AND;
+    }
+
     public void SetMyRange(MyString.Range range)
     {
         my_range = range;
@@ -126,6 +131,10 @@ public class Token
     public void MarkError(string msg)
     {
         err_msg = msg;
+    }
+
+    public void MarkToStr(){
+        type = (int)TokenType.STRING;
     }
 
     public void SetStr(string str)
@@ -275,7 +284,7 @@ public class LuaLex
         return ok;
     }
 
-    Token _ReadNameOrKeyword()
+    Token _ReadNameOrKeyword(bool force_name = false)
     {
         Debug.Assert(IsWordLetter(_cur_char));
         _buf.Clear();
@@ -284,7 +293,7 @@ public class LuaLex
             _buf.Append(_cur_char);
             _NextChar();
         } while (IsWordLetterOrNumber(_cur_char));
-        var token = new Token(_buf.ToString(), false);
+        var token = new Token(_buf.ToString(), force_name);
         return token;
     }
     
@@ -594,7 +603,7 @@ public class LuaLex
             }
             else if (IsWordLetter(_cur_char))
             {
-                return _ReadNameOrKeyword();
+                return _ReadNameOrKeyword(true);
             }
             else if (_cur_char == '$') 
             {
