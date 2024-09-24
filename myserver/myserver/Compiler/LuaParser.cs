@@ -305,6 +305,15 @@ public class LuaParser {
 1. 代码如何组织的问题。
 2. 对于在中间修改源文件的情况如何高效实现。【这个更难一点】
 */
+
+
+/*
+先用括号匹配的方式，初步划分出区块，就像脚手架一样。
+i
+*/
+
+
+
 public class LuaTokenRange{
     public void XX(MyString.Range content){
         List<Token> tokens= new List<Token>();

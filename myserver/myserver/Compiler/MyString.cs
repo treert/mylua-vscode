@@ -1,4 +1,5 @@
-﻿using MyServer.Protocol;
+﻿using MyServer.Misc;
+using MyServer.Protocol;
 using System;
 using System.Buffers;
 using System.Collections.Generic;
@@ -243,3 +244,53 @@ public class MyString
     }
 }
 
+
+class MyFile{
+    List<MyLine> m_lines = [];
+
+    public MyFile(string filepath){
+        var lines = File.ReadAllLines(filepath);
+        m_lines.EnsureCapacity(lines.Length);
+        for (int i = 0; i < lines.Length; i++){
+
+        }
+    }
+}
+
+/*
+行信息。
+1. 这儿会做一层抽象。数据可能是自带的数组，也可能是底层读到的文件星星。
+*/
+class MyLine{
+    public MyLine(string row_line){
+        m_row_line = row_line;
+    }
+
+    int GetTabSize(){
+        if (m_chars is not null){
+            int tab_size = 0;
+            foreach (char c in m_chars){
+                if (c == ' ') tab_size++;
+                else if (c == '\t') tab_size += MyConfig.TabSize;
+                else break;
+            }
+            return tab_size;
+        }
+        else{
+            int tab_size = 0;
+            foreach (char c in m_row_line){
+                if (c == ' ') tab_size++;
+                else if (c == '\t') tab_size += MyConfig.TabSize;
+                else break;
+            }
+            return tab_size;
+        }
+    }
+    char[] m_chars = null;// 如果 is null 则是底层读到的原始文件。
+    string m_row_line = null;
+}
+
+class MySrcRange{
+    MyFile m_file;
+
+}
