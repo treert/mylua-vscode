@@ -246,48 +246,61 @@ public class MyString
 
 
 class MyFile{
-    List<MyLine> m_lines = [];
+    public List<MyLine> m_lines = [];
 
+    public MyFile(string[] lines){
+        _Ctor(lines);
+    }
+    
     public MyFile(string filepath){
         var lines = File.ReadAllLines(filepath);
+        _Ctor(lines);
+    }
+
+    private void _Ctor(string[] lines){
         m_lines.EnsureCapacity(lines.Length);
         for (int i = 0; i < lines.Length; i++){
-
+            var line = new MyLine(lines[i], i);
+            
+            m_lines.Add(line);
         }
     }
 }
 
 /*
 行信息。
-1. 这儿会做一层抽象。数据可能是自带的数组，也可能是底层读到的文件星星。
 */
-class MyLine{
-    public MyLine(string row_line){
-        m_row_line = row_line;
+public class MyLine{
+    public MyLine(string row_line, int row_idx){
+        m_chars = row_line.ToArray();
+        m_row_idx = row_idx;
+        _CalTabSize();
     }
 
-    int GetTabSize(){
-        if (m_chars is not null){
-            int tab_size = 0;
-            foreach (char c in m_chars){
-                if (c == ' ') tab_size++;
-                else if (c == '\t') tab_size += MyConfig.TabSize;
-                else break;
-            }
-            return tab_size;
-        }
-        else{
-            int tab_size = 0;
-            foreach (char c in m_row_line){
-                if (c == ' ') tab_size++;
-                else if (c == '\t') tab_size += MyConfig.TabSize;
-                else break;
-            }
-            return tab_size;
+    public int Length => m_chars.Length;
+    public int RowIdx{
+        get { return m_row_idx;}
+        set { m_row_idx = value;}
+    }
+    public int TabSize => m_tab_size;
+
+    // 在行尾之后读取，统一都返回 \n
+    public char this[int index]
+    {
+        get { return index < Length ? m_chars[index] : '\n'; }
+    }
+
+    void _CalTabSize(){
+        m_tab_size = 0;
+        foreach (char c in m_chars){
+            if (c == ' ') m_tab_size++;
+            else if (c == '\t') m_tab_size += MyConfig.TabSize;
+            else break;
         }
     }
-    char[] m_chars = null;// 如果 is null 则是底层读到的原始文件。
-    string m_row_line = null;
+    readonly char[] m_chars = default;
+    int m_tab_size = 0;
+    int m_row_idx = 0;
 }
 
 class MySrcRange{
