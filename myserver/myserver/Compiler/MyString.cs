@@ -267,8 +267,25 @@ class MyFile{
     }
 }
 
+public enum MyLineParseInitFlag{
+    Normal              = 0,
+    DoubleQuote         = 1<<4,
+    SingleQuote         = 1<<5,
+    Dollar              = 1<<6,// 纯标记
+    RawString           = 1<<7,
+    RawComment          = 1<<8,
+    DollarDoubleQuote   = Dollar | DoubleQuote,
+    DollarSingleQuote   = Dollar | SingleQuote,
+}
+
 /*
 行信息。
+词法解析是以行为单位的。开始解析时，有多种初始状态。
+1. 正常模式
+2. " or ' 的字符串触发了 \ 结尾换行。
+    - 以 $ 开头
+3. [=*[ string ]=*] 的后续行。
+4. --[=*[ comment ]=*] 的后续行。
 */
 public class MyLine{
     public MyLine(string row_line, int row_idx){
@@ -298,6 +315,9 @@ public class MyLine{
             else break;
         }
     }
+
+    MyLineParseInitFlag m_parseInitFlag = MyLineParseInitFlag.Normal;
+    int m_equal_num = 0;
     readonly char[] m_chars = default;
     int m_tab_size = 0;
     int m_row_idx = 0;

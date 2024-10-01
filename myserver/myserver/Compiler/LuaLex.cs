@@ -67,14 +67,37 @@ public enum TokenType
     NAME = 0xFFFF,
 }
 
+/*
+补充 TokenType.Commnet 和 TokenType.String 信息
+解析的状态
+1. OneLine      普通单行
+2. Started      多行的起点。
+3. InMiddle     中间段
+4. Ended        结束了
+
+字符串类型
+1. " or '
+2. $ + (" or ')
+3. [=*[ string ]=*]         需要额外记录 numof(=)
+4. --[=*[ comment ]=*]      需要额外记录 numof(=)
+
+*/
+
 // 补充 TokenType.Commnet 和 TokenType.String 信息
 // 还需要额外字段记录 numof(=)，值是 numof(=)+2 or 0
 public enum TokenStrFlag
 {
-    OneLine,// 普通单行。
-    Started,// 多行的起点。
-    InMiddle,// 中间段。
-    Ended,// 结束了。
+    OneLine             = 0,
+    Started             = 1,
+    InMiddle            = 2,
+    Ended               = 3,
+    DoubleQuote         = 1<<4,
+    SingleQuote         = 1<<5,
+    Dollar              = 1<<6,// 纯标记
+    RawString           = 1<<7,
+    RawComment          = 1<<8,
+    DollarDoubleQuote   = Dollar | DoubleQuote,
+    DollarSingleQuote   = Dollar | SingleQuote,
 }
 
 public class Token
@@ -92,8 +115,10 @@ public class Token
     public double num_double;
     public string str;
 
+
     public TokenStrFlag m_str_flag = TokenStrFlag.OneLine;
     public int m_str_sep_num = 0;
+
 
     public MyLine src_line;
     public int start_idx;
@@ -214,7 +239,8 @@ public class LexError
 }
 
 /*
-    1. 单行为单位来解析。
+以单行为单位来解析。
+
 */
 public class LuaLex
 {
