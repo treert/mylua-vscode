@@ -10,11 +10,10 @@ using Protocol = MyServer.Protocol;
 My.Logger.Info("Hello World");
 My.Logger.Info($"pwd={Environment.CurrentDirectory}");
 
-MyString myString = new MyString();
-myString.ReplaceRange(0, 0, "0123456789");
-myString.ReplaceRange(3, 6,"xyz");
-myString.ReplaceRange(3, 6, "mn");
-myString.ReplaceRange(3, 5, "abcde");
+var lines = File.ReadAllLines(@"C:\Users\onemore\Desktop\MyTmp\mylua\test.lua");
+
+MyFile myFile= new MyFile(lines);
+myFile.ParseTokens();
 
 
 //JsonRpcMgr.Instance.Init();

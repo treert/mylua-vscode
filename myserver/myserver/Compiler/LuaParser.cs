@@ -273,20 +273,23 @@ public class LuaParser {
 
     }
     public SyntaxTree Parse(MyString.Range content){
-        _lex.Init(content);
+        // _lex.Init(content);
         return ParseModule();
     }
 
     private Token LookAhead(){
-        return _lex.LookAhead();
+        return null;
+        // return _lex.LookAhead();
     }
 
     private Token LookAhead2(){
-        return _lex.LookAhead2();
+        return null;
+        // return _lex.LookAhead2();
     }
 
     private Token NextToken(){
-        return _lex.NextToken();
+        return null;
+        // return _lex.NextToken();
     }
 
     private void ThrowParseException(string message){
@@ -315,25 +318,7 @@ i
 
 
 public class LuaTokenRange{
-    public void XX(MyString.Range content){
-        List<Token> tokens= new List<Token>();
-        var lex = new LuaLex();
-        lex.Init(content);
-        Token pre_tok = new Token(TokenType.EOF);
-        for(;;){
-            var tok = lex.NextToken();
-            tokens.Add(tok);
-            if (tok.IsKeyword() && pre_tok.Match('.')) {
-                tok.MarkToStr();
-            }
-            else if(tok.Match('=') && pre_tok.IsKeyword()){
-                // 这儿讨巧了。有副作用，但是不会影响正常的流程。
-                pre_tok.MarkToStr();
-            }
-            if (tok.Match(TokenType.EOF)){
-                break;
-            }
-        }
+    public void XX(){
 
     }
 }

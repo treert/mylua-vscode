@@ -265,17 +265,15 @@ class MyFile{
             m_lines.Add(line);
         }
     }
-}
 
-public enum MyLineParseInitFlag{
-    Normal              = 0,
-    DoubleQuote         = 1<<4,
-    SingleQuote         = 1<<5,
-    Dollar              = 1<<6,// 纯标记
-    RawString           = 1<<7,
-    RawComment          = 1<<8,
-    DollarDoubleQuote   = Dollar | DoubleQuote,
-    DollarSingleQuote   = Dollar | SingleQuote,
+    // 测试下
+    public void ParseTokens(){
+        MyLine pre_line = null;
+        var lex = new LuaLex();
+        foreach (var line in m_lines){
+            lex.ParseOneLine(line, pre_line);
+        }
+    }
 }
 
 /*
@@ -294,12 +292,16 @@ public class MyLine{
         _CalTabSize();
     }
 
+    public TokenStrFlag m_parse_flag = TokenStrFlag.Normal;
+    public int m_equal_sep_num = 0;
+
     public int Length => m_chars.Length;
     public int RowIdx{
         get { return m_row_idx;}
         set { m_row_idx = value;}
     }
     public int TabSize => m_tab_size;
+    public List<Token> Tokens => m_tokens;
 
     // 在行尾之后读取，统一都返回 \n
     public char this[int index]
@@ -316,14 +318,10 @@ public class MyLine{
         }
     }
 
-    MyLineParseInitFlag m_parseInitFlag = MyLineParseInitFlag.Normal;
-    int m_equal_num = 0;
+    List<Token> m_tokens = new List<Token>();
+
+
     readonly char[] m_chars = default;
     int m_tab_size = 0;
     int m_row_idx = 0;
-}
-
-class MySrcRange{
-    MyFile m_file;
-
 }

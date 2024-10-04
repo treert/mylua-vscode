@@ -41,7 +41,7 @@ public enum Keyword
 
 public enum TokenType
 {
-    EOF = 256,// 不设置成0了，源码里不能有0
+    EOL = 256,// 不设置成0了，源码里不能有0
 
     DIVIDE, // // 整除
     CONCAT,// .. string concat
@@ -72,7 +72,7 @@ public enum TokenType
 解析的状态
 1. OneLine      普通单行
 2. Started      多行的起点。
-3. InMiddle     中间段
+3. InMiddle     中间段 逻辑层面的
 4. Ended        结束了
 
 字符串类型
@@ -80,6 +80,7 @@ public enum TokenType
 2. $ + (" or ')
 3. [=*[ string ]=*]         需要额外记录 numof(=)
 4. --[=*[ comment ]=*]      需要额外记录 numof(=)
+5. 字符串里的转义字符
 
 */
 
@@ -87,46 +88,69 @@ public enum TokenType
 // 还需要额外字段记录 numof(=)，值是 numof(=)+2 or 0
 public enum TokenStrFlag
 {
-    OneLine             = 0,
-    Started             = 1,
-    InMiddle            = 2,
-    Ended               = 3,
+    Normal             = 0,
+    Started             = 1<<0,// 两大类情况：1. $string 开头的 $ 符号；2. 几种字符串的换行, 这个时候影响下一个 line 的解析
+    Ended               = 1<<2,
     DoubleQuote         = 1<<4,
     SingleQuote         = 1<<5,
     Dollar              = 1<<6,// 纯标记
     RawString           = 1<<7,
     RawComment          = 1<<8,
+    ZipMode             = 1<<9,// for \z, 只用于 sub_tok
     DollarDoubleQuote   = Dollar | DoubleQuote,
     DollarSingleQuote   = Dollar | SingleQuote,
+    OnlyStrMask = SingleQuote | DoubleQuote | Dollar | RawString | RawComment,// 用于获取 str flag
 }
 
 public class Token
 {
-    public int RealTokenType
-    {
-        get
-        {
-            if (err_msg == null) return (int)TokenType.Illegal;
-            return type;
-        }
-    }
     public int type;
     public long num_int;
     public double num_double;
     public string str;
 
+    public string ErrMsg => err_msg;
 
-    public TokenStrFlag m_str_flag = TokenStrFlag.OneLine;
-    public int m_str_sep_num = 0;
+    public TokenStrFlag m_str_flag = TokenStrFlag.Normal;
+    public void AddStrFlag(TokenStrFlag flag){
+        m_str_flag |= flag;
+    }
+    public void RemoveStrFlag(TokenStrFlag flag){
+        m_str_flag &= ~flag;
+    }
+    public void SetStrFlag(TokenStrFlag flag){
+        m_str_flag = flag;
+    }
+
+    public bool TestStrFlag(TokenStrFlag flag){
+        return (m_str_flag & flag) != 0;
+    }
+    public int m_equal_sep_num = 0;
+
+    public bool IsStarted {
+        get { return TestStrFlag(TokenStrFlag.Started);}
+        set {
+            if(value) AddStrFlag(TokenStrFlag.Started);
+            else RemoveStrFlag(TokenStrFlag.Started);
+        }
+    }
+
+    public bool IsEnded{
+        get { return TestStrFlag(TokenStrFlag.Ended);}
+        set {
+            if(value) AddStrFlag(TokenStrFlag.Ended);
+            else RemoveStrFlag(TokenStrFlag.Ended);
+        }
+    }
+
+    public bool IsEndOfLine => Match(TokenType.EOL);
 
 
     public MyLine src_line;
     public int start_idx;
     public int end_idx;// end idx is exclusive
 
-    public MyString.Range my_range;
-
-    public string err_msg = null;// 如果不为空，说明有错误
+    public string err_msg = string.Empty;// 如果不为空，说明有错误
     public List<Token> m_sub_toks = null;
 
 
@@ -176,18 +200,13 @@ public class Token
         this.end_idx = end_idx;
     }
 
-    public void SetMyRange(MyString.Range range)
-    {
-        my_range = range;
-    }
-
     public void MarkError(string msg)
     {
         err_msg = msg;
     }
 
-    public void MarkToStr(){
-        type = (int)TokenType.STRING;
+    public void MarkToName(){
+        type = (int)TokenType.NAME;
     }
 
     public void SetStr(string str)
@@ -240,58 +259,136 @@ public class LexError
 
 /*
 以单行为单位来解析。
-
+状态描述：
+1. 普通模式
+2. " or ' 字符串中
+3. $ + (" or ') 字符串中
+    - 内嵌{ } 模式，不过不允许括号跨行。这个模式中允许 " or ' 字符串 raw string or commnet，由于不能跨行，须得一次性读完。
+4. [=*[ string ]=*] 中，开始解析时
+5. --[=*[ comment ]=*] 中，开始解析时
 */
 public class LuaLex
 {
-    public Token CurrentToken => _current_token;
-    public bool IsInDollarString => dollar_char != '\0' && dollar_open_cnt == 0;
+    public bool IsInDollarMode => (m_cur_parse_flag&TokenStrFlag.Dollar) != 0;
+
+
+    char DollarChar {
+        get {
+            if (m_cur_parse_flag == TokenStrFlag.DollarSingleQuote) return '\'';
+            else if (m_cur_parse_flag == TokenStrFlag.DollarDoubleQuote) return '"';
+            else return '\0';
+        }
+        set {
+            if (value == '"') m_cur_parse_flag = TokenStrFlag.DollarDoubleQuote;
+            else if (value == '\'') m_cur_parse_flag = TokenStrFlag.DollarSingleQuote;
+            else m_cur_parse_flag = TokenStrFlag.Normal;
+            Debug.Assert(m_dollar_open_cnt == 0);
+        }
+    }
 
     public bool IsAtEnd => _cur_char == '\n';
 
-    private Token _current_token = new Token(TokenType.EOF);
-    private Token _look_ahead_token = null;
-    private Token _look_ahead2_token = null;
-
-    // 阅读下一个Token，会往前推进一步。
-    public Token NextToken(){
-        if (_look_ahead_token != null){
-            _current_token = _look_ahead_token;
-            _look_ahead_token = _look_ahead2_token;
-            _look_ahead2_token = null;
-        } else {
-            _current_token = _ReadNextToken();
-        }
-        return _current_token;
+    TokenStrFlag m_cur_parse_flag = TokenStrFlag.Normal;
+    int m_equal_sep_num = 0;
+    void ResetParseFlag(){
+        m_equal_sep_num = 0;
+        m_cur_parse_flag = TokenStrFlag.Normal;
+        m_dollar_open_cnt = 0;
     }
 
-    public Token LookAhead(){
-        if (_look_ahead_token is null){
-            _look_ahead_token = _ReadNextToken();
-        }
-        return _look_ahead_token;
-    }
-
-    public Token LookAhead2(){
-        LookAhead();
-        if (_look_ahead2_token is null){
-            _look_ahead2_token = _ReadNextToken();
-        }
-        return _look_ahead2_token;
-    }
-
+    // todo 这个要作废了
     public void Init(MyString.Range content)
     {
-        _content = content;
         _cur_idx = -1;
         _NextChar();// ready for read token
 
-        dollar_char = '\0';
-        dollar_open_cnt = 0;
+        m_dollar_open_cnt = 0;
+    }
 
-        _current_token = new Token(TokenType.EOF);
-        _look_ahead_token = null;
-        _look_ahead2_token = null;
+    public void ParseOneLine(MyLine line, MyLine pre_line = null, bool only_if_flag_changed = false){
+        m_dollar_open_cnt = 0;
+        m_equal_sep_num = 0;
+        m_cur_parse_flag = TokenStrFlag.Normal;
+        if (pre_line != null && pre_line.Tokens.Count > 0){
+            var tk = pre_line.Tokens.Last();
+            if (tk.IsStarted){
+                m_equal_sep_num = tk.m_equal_sep_num;
+                m_cur_parse_flag = tk.m_str_flag & TokenStrFlag.OnlyStrMask;
+                Debug.Assert(m_cur_parse_flag != TokenStrFlag.Normal);
+            }
+        }
+        if (only_if_flag_changed){
+            if (m_equal_sep_num == line.m_equal_sep_num && m_cur_parse_flag == line.m_parse_flag){
+                return;// do nothing
+            }
+        }
+        // 开始解析
+        line.m_parse_flag = m_cur_parse_flag;
+        line.m_equal_sep_num = m_equal_sep_num;
+        line.Tokens.Clear();
+        _line = line;
+        _cur_idx = -1;
+        _NextChar();// ready for read token
+
+        Token pre_tok = new Token(TokenType.EOL);
+        Token last_tok = new Token(TokenType.EOL);
+        for(;;){
+            var cur_tok = _ReadNextToken();
+            if (cur_tok.IsEndOfLine) break;
+            line.Tokens.Add(cur_tok);
+            last_tok = cur_tok;
+            if (cur_tok.IsKeyword()){
+                if (pre_tok.Match('.') || pre_tok.Match(TokenType.DBCOLON) || pre_tok.Match(Keyword.GOTO)){
+                    cur_tok.MarkToName();
+                }
+            }
+            else if(cur_tok.Match('=') && pre_tok.IsKeyword()){
+                // 这儿讨巧了。有副作用，但是不会影响正常的流程。
+                pre_tok.MarkToName();
+            }
+        }
+        // 处理下换行标记
+        if (last_tok.IsEndOfLine){ // 没读到任何token，需要特殊处理下多行字符串
+            if (m_cur_parse_flag == TokenStrFlag.RawComment || m_cur_parse_flag == TokenStrFlag.RawString){
+                // 增加中间段的空行
+                var tk = _NewToken4String("", 0, 0);
+                tk.IsStarted = true;
+                tk.AddStrFlag(m_cur_parse_flag);
+                tk.m_equal_sep_num = m_equal_sep_num;
+                line.Tokens.Add(tk);
+            }
+            else if (m_cur_parse_flag != TokenStrFlag.Normal){
+                // 强制结束掉
+                var tk = _NewToken4String("", 0, 0);
+                tk.IsEnded = true;
+                tk.MarkError("string need End or NewLine");
+                line.Tokens.Add(tk);
+            }
+        }
+        else if (IsInDollarMode){
+            // $string 未结束
+            if (!last_tok.IsStarted){
+                // 未正常结束
+                last_tok.IsEnded = true;// 强制结束
+                last_tok.MarkError(m_dollar_open_cnt == 0 ? "$string need End or NewLine" : "$string {} mode must match in one line");
+            }
+            else{
+                if (last_tok.Match('$')){
+                    // 一种极限情况 $"\n
+                    last_tok.IsEnded = true;// 强制结束自己
+                    last_tok.MarkError("unfinished empty $string");
+                }
+            }
+        }
+        else if(m_cur_parse_flag != TokenStrFlag.Normal){
+            if (!last_tok.IsStarted){
+                // 没有正常结束呢
+                last_tok.IsEnded = true;// 强制借宿
+                if (last_tok.ErrMsg != ""){
+                    last_tok.MarkError("string need End or NewLine");
+                }
+            }
+        }
     }
 
     static bool IsWordLetter(char c)
@@ -305,11 +402,9 @@ public class LuaLex
     }
 
     StringBuilder _buf = new StringBuilder();
-    MyString.Range _content;
 
-    char dollar_char;
-    char str_limit_char = '\0';// ' or "
-    int dollar_open_cnt;
+    int m_dollar_open_cnt;
+
 
     MyLine _line;
 
@@ -359,6 +454,7 @@ public class LuaLex
         token.SetRange(start_idx, _cur_idx);
         return token;
     }
+
     
     // \ddd
     Token _ReadDigitalEsc(){
@@ -373,7 +469,7 @@ public class LuaLex
         }
         else if (r <= 0xff){
             char c = (char)r;
-            return _NewToken4String(c.ToString(), _cur_idx - 1 - i, 1+i);
+            return _NewTokenInStr(c.ToString(), _cur_idx - 1 - i, 1+i);
         }
         else{
             return _NewIllegalToken(_cur_idx - 1-i, 1+i, "too large in format '\\ddd'");
@@ -398,7 +494,7 @@ public class LuaLex
         }
         if(valid_num == 2){
             char cc = (char)x;
-            return _NewToken4String(cc.ToString(), _cur_idx-4, 4);
+            return _NewTokenInStr(cc.ToString(), _cur_idx-4, 4);
         }
         return _NewIllegalToken(_cur_idx - 2 - valid_num, 2 + valid_num, "invalid \\xdd");
     }
@@ -421,7 +517,7 @@ public class LuaLex
                 if(utf8_ok && valid_num > 0){
                     try{
                         string cc = char.ConvertFromUtf32(x);
-                        return _NewToken4String(cc, _cur_idx - 4 - valid_num, 4+valid_num);
+                        return _NewTokenInStr(cc, _cur_idx - 4 - valid_num, 4+valid_num);
                     }
                     catch{
                         return _NewIllegalToken( _cur_idx - 4 - valid_num, 4+valid_num, "invalid utf8 code");
@@ -440,13 +536,62 @@ public class LuaLex
         }
     }
 
+    Token _ReadMiddleToken(){
+        if (m_cur_parse_flag == TokenStrFlag.SingleQuote || m_cur_parse_flag == TokenStrFlag.DoubleQuote){
+            var tok = _ReadString(m_cur_parse_flag == TokenStrFlag.SingleQuote ? '\'' : '"');
+            return tok;
+        }
+        if (m_cur_parse_flag == TokenStrFlag.RawString){
+            var tok = _ReadRawString(true);
+            return tok;
+        }
+        if (m_cur_parse_flag == TokenStrFlag.RawComment){
+            var tok = _ReadLongComment(true);
+            return tok;
+        }
+        Debug.Assert(false, "should not happend");
+        return null;
+    }
+
     Token _ReadNextToken()
     {
-        if (IsInDollarString)
-        {
-            return _ReadInDollarString();
+        if (IsAtEnd) {
+            var tok = _NewToken(TokenType.EOL, _cur_idx, _cur_idx);
+            return tok;
         }
-        
+
+        if (m_dollar_open_cnt == 0 && m_cur_parse_flag != TokenStrFlag.Normal){
+            if (IsInDollarMode) {
+                var tok = _ReadInDollarString();
+                if (tok.IsEnded){
+                    ResetParseFlag();// 正常结束
+                }
+                else if (IsAtEnd && !tok.IsStarted){
+                    // 意外结束了。词法分析后续会处理这个情况。flag 残留给后续使用。
+                }
+                return tok;
+            }
+            else {
+                // 一些字符串换行模式。
+                var tok = _ReadMiddleToken();
+                if (!tok.IsStarted){
+                    // 主动结束掉
+                    tok.IsEnded = true;
+                    ResetParseFlag();
+                }
+                return tok;
+            }
+        }
+
+        {
+            var tok = _ReadNormalToken();
+            return tok;
+        }
+
+    }
+
+    Token _ReadNormalToken()
+    {
         while (_cur_char != '\n')
         {
             switch(_cur_char)
@@ -463,21 +608,16 @@ public class LuaLex
                     _NextChar();
                     if (_cur_char == '"' || _cur_char == '\'')
                     {
-                        if (dollar_char != '\0')
+                        if (IsInDollarMode)
                         {
                             tok.MarkError("do not support inner <$string>");
                             // 就不吃掉了。下一个token当成普通字符串
                         }
                         else
                         {
-                            if (dollar_open_cnt == 0){
-                                dollar_char = _cur_char;// 进入 $string mode
-                                _NextChar();
-                            }
-                            else
-                            {
-                                tok.MarkError("<$string> not support nest.");
-                            }
+                            tok.IsStarted = true;
+                            DollarChar = _cur_char;// 进入 $string mode
+                            _NextChar();
                         }
                     }
                     return tok;
@@ -507,54 +647,61 @@ public class LuaLex
                     return _NewToken4OneChar('[', _cur_idx - 1);
                 case '=':
                     _NextChar();
-                    if (_CheckThenSkip('=')) return _NewTokenByType(TokenType.EQ, _cur_idx-2, 2);
+                    if (_CheckThenSkip('=')) return _NewToken(TokenType.EQ, _cur_idx-2, _cur_idx);
                     else return _NewToken4OneChar('=', _cur_idx - 1);
                 case '<':
                     _NextChar();
-                    if (_CheckThenSkip('=')) return _NewTokenByType(TokenType.LE, _cur_idx-2, 2);
-                    else if (_CheckThenSkip('<')) return _NewTokenByType(TokenType.SHIFT_LEFT, _cur_idx-2, 2);
+                    if (_CheckThenSkip('=')) return _NewToken(TokenType.LE, _cur_idx-2, _cur_idx);
+                    else if (_CheckThenSkip('<')) return _NewToken(TokenType.SHIFT_LEFT, _cur_idx-2, _cur_idx);
                     else return _NewToken4OneChar('<', _cur_idx - 1);
                 case '>':
                     _NextChar();
-                    if (_CheckThenSkip('=')) return _NewTokenByType(TokenType.GE, _cur_idx-2, 2);
-                    else if (_CheckThenSkip('>')) return _NewTokenByType(TokenType.SHIFT_RIGHT, _cur_idx -2, 2);
+                    if (_CheckThenSkip('=')) return _NewToken(TokenType.GE, _cur_idx-2, _cur_idx);
+                    else if (_CheckThenSkip('>')) return _NewToken(TokenType.SHIFT_RIGHT, _cur_idx -2, _cur_idx);
                     else return _NewToken4OneChar('>', _cur_idx - 1);
                 case '/':
                     _NextChar();
-                    if (_CheckThenSkip('/')) return  _NewTokenByType(TokenType.DIVIDE, _cur_idx-2, 2);
+                    if (_CheckThenSkip('/')) return  _NewToken(TokenType.DIVIDE, _cur_idx-2, _cur_idx);
                     else return _NewToken4OneChar('/', _cur_idx - 1);
                 case '~':
                     _NextChar();
-                    if (_CheckThenSkip('=')) return _NewTokenByType(TokenType.NE, _cur_idx-2, 2);
+                    if (_CheckThenSkip('=')) return _NewToken(TokenType.NE, _cur_idx-2, _cur_idx);
                     else return _NewToken4OneChar('~', _cur_idx - 1);
                 case '?':
                     _NextChar();
-                    if (_CheckThenSkip('?')) return _NewTokenByType(TokenType.QQUESTION, _cur_idx - 2, 2);
+                    if (_CheckThenSkip('?')) return _NewToken(TokenType.QQUESTION, _cur_idx - 2, _cur_idx);
                     else return _NewToken4OneChar('?', _cur_idx - 1);
                 case ':':
                     _NextChar();
-                    if (_CheckThenSkip(':')) return _NewTokenByType(TokenType.DBCOLON, _cur_idx - 2, 2);
+                    if (_CheckThenSkip(':')) return _NewToken(TokenType.DBCOLON, _cur_idx - 2, _cur_idx);
                     else return _NewToken4OneChar(':', _cur_idx - 1);
                 case '\'': case '"':
-                    return _ReadString();
+                    char del = _cur_char;
+                    _NextChar();
+                    return _ReadString(del);
                 case '.': /* '.', '..', '...', or number */
                     _NextChar();
                     if (_CheckThenSkip('.')){
-                        if (_CheckThenSkip('.')) return _NewTokenByType(TokenType.DOTS, _cur_idx - 3, 3);
-                        else return _NewTokenByType(TokenType.CONCAT, _cur_idx - 2, 2);
+                        if (_CheckThenSkip('.')) return _NewToken(TokenType.DOTS, _cur_idx - 3, _cur_idx);
+                        else return _NewToken(TokenType.CONCAT, _cur_idx - 2, _cur_idx);
                     }
                     else if (char.IsDigit(_cur_char)) return _ReadNumber(true);
                     else return _NewToken4OneChar('.', _cur_idx - 1);
                 default: {
                     if (char.IsDigit(_cur_char)) return _ReadNumber();
                     else if (IsWordLetter(_cur_char)) _ReadNameOrKeyword();
-                    else {/* single-char tokens ('+', '*', '%', '{', '}', ...) */
+                    else if(char.IsAscii(_cur_char)) {/* single-char tokens ('+', '*', '%', '{', '}', ...) */
                         var tok = _NewTokenForCurChar(); // 可能是错误的，由 parser 来 Mark
-                        if (dollar_char != '\0') {
-                            Debug.Assert(dollar_open_cnt > 0);
-                            if ('{' == _cur_char) ++dollar_open_cnt;
-                            else if('}' == _cur_char) --dollar_open_cnt;
+                        if (DollarChar != '\0') {
+                            Debug.Assert(m_dollar_open_cnt > 0);
+                            if ('{' == _cur_char) ++m_dollar_open_cnt;
+                            else if('}' == _cur_char) --m_dollar_open_cnt;
                         }
+                        _NextChar();
+                        return tok;
+                    }
+                    else { // 非法字符
+                        var tok = _NewIllegalToken(_cur_idx, 1, "illegal char");
                         _NextChar();
                         return tok;
                     }
@@ -562,13 +709,13 @@ public class LuaLex
                 }
             }
         }
-        return _NewTokenByType(TokenType.EOF, _cur_idx, 0);
+        return _NewToken(TokenType.EOL, _cur_idx, _cur_idx);
     }
 
     Token _NewTokenForCurChar()
     {
         var tok = new Token(_cur_char);
-        tok.SetMyRange(_content.SubRange(_cur_idx, 1));
+        tok.SetRange(_cur_idx, _cur_idx+1);
         return tok;
     }
 
@@ -579,28 +726,43 @@ public class LuaLex
         return tok;
     }
 
-    Token _NewTokenByType(TokenType type, int idx, int length)
+    Token _NewToken(TokenType type, int start, int end)
     {
         var tok = new Token(type);
-        tok.SetRange(idx, idx + length);
+        tok.SetRange(start, end);
+        return tok;
+    }
+
+    // 字符串内部的转义字符。
+    Token _NewTokenInStr(string msg, int idx, int length){
+        var tok = _NewToken(TokenType.STRING, idx, idx + length);
+        tok.SetStr(msg);
         return tok;
     }
 
     Token _NewToken4String(string msg, int idx, int length) {
-        var tok = _NewTokenByType(TokenType.STRING, idx, length);
+        var tok = _NewToken(TokenType.STRING, idx, idx+length);
         tok.SetStr(msg);
         return tok;
     }
 
     Token _NewIllegalToken(int idx, int length, string msg)
     {
-        var token = _NewTokenByType(TokenType.Illegal, idx, length);
+        var token = _NewToken(TokenType.Illegal, idx, idx + length);
         token.MarkError(msg);
         return token;
     }
 
+    // 读取字符串Token，可能标记 Started
     Token _ReadLineStringUtil(char del1, char del2){
         var tok = new Token(TokenType.STRING);
+        if (del1 == del2){
+            tok.AddStrFlag(del1 == '"' ? TokenStrFlag.DoubleQuote : TokenStrFlag.SingleQuote);
+        }
+        else{
+            Debug.Assert(del2 == '$');
+            tok.AddStrFlag(del1 == '"' ? TokenStrFlag.DollarDoubleQuote : TokenStrFlag.DollarSingleQuote);
+        }
         int start_idx = _cur_idx;
         while (_cur_char != del1 && _cur_char != del2) {
             switch(_cur_char){
@@ -608,8 +770,8 @@ public class LuaLex
                     tok.MarkError("unfinished string");
                     goto finish_read;
                 case '\\': {
-                    Token? sub_tok = null;
-                    char c = '\0';
+                    Token? sub_tok;
+                    char c;
                     _NextChar();
                     switch(_cur_char){
                         case 'a': c = '\a'; goto save_one_char;
@@ -619,20 +781,33 @@ public class LuaLex
                         case 'r': c = '\r'; goto save_one_char;
                         case 't': c = '\t'; goto save_one_char;
                         case 'v': c = '\v'; goto save_one_char;
-                        case 'x': sub_tok = _ReadHexEsc(); goto save_tok;
-                        case 'u': sub_tok = _ReadUnicodeEsc(); goto save_tok;
-                        case '\n': c = '\n'; goto save_one_char;
                         case '\\': case '\'': case '\"':
                             c = _cur_char; goto save_one_char;
-                        case 'z':{ /* zap following span of spaces */
+                        case 'x': sub_tok = _ReadHexEsc(); goto save_tok;
+                        case 'u': sub_tok = _ReadUnicodeEsc(); goto save_tok;
+                        case '\n': { // 行末 \ ，触发换行
+                            sub_tok = _NewTokenInStr("\n", _cur_idx-2, 1);
+                            tok.AddSubToken(sub_tok);
+                            tok.IsStarted = true;// 换行，触发多行逻辑
+                            goto finish_read;
+                        }
+                        case 'z':{ /* zap following span of spaces，支持换行的 */
                             _NextChar();
                             int zap_num = 2;
-                            while(char.IsWhiteSpace(_cur_char)){
+                            while(!IsAtEnd && char.IsWhiteSpace(_cur_char)){
                                 _NextChar();
                                 zap_num++;
                             }
-                            sub_tok = _NewToken4String("", _cur_idx - zap_num, zap_num);
-                            goto save_tok;
+                            sub_tok = _NewTokenInStr("", _cur_idx - zap_num, zap_num);
+                            sub_tok.AddStrFlag(TokenStrFlag.ZipMode);
+                            if (IsAtEnd) {
+                                tok.AddSubToken(sub_tok);
+                                tok.IsStarted = true;// 换行，触发多行逻辑
+                                goto finish_read;
+                            }
+                            else{
+                                goto save_tok;// 继续
+                            }
                         }
                         default:{
                             sub_tok = _ReadDigitalEsc();
@@ -640,17 +815,8 @@ public class LuaLex
                         }
                     }
                     save_one_char:
-                        if (_cur_char == '\n'){
-                            sub_tok = _NewToken4String("\n", _cur_idx-2, 1);
-                            tok.AddSubToken(sub_tok);
-                            tok.m_str_flag = TokenStrFlag.Started;// 换行，触发多行逻辑
-                            goto finish_read;
-                        }
-                        else
-                        {
-                            _NextChar();
-                            sub_tok = _NewToken4String(c.ToString(), _cur_idx-2, 2);
-                        }
+                        _NextChar();
+                        sub_tok = _NewTokenInStr(c.ToString(), _cur_idx-2, 2);
                     save_tok:
                         tok.AddSubToken(sub_tok);
                     break;
@@ -665,14 +831,17 @@ public class LuaLex
         return tok;
     }
 
+    // 读取 $string 里的片段。可能设置 IsEnded
     Token _ReadInDollarString()
     {
-        Debug.Assert(dollar_char != '\0' && dollar_open_cnt == 0);
+        char limit_char = DollarChar;
+        Debug.Assert(limit_char != '\0' && m_dollar_open_cnt == 0);
+
         if (_cur_char == '$') {// enter $ mode
             _NextChar();
             if(_cur_char == '{')
             {
-                dollar_open_cnt = 1;
+                m_dollar_open_cnt = 1;
                 _NextChar();
                 return _NewToken4OneChar('{', _cur_idx - 1);
             }
@@ -683,12 +852,15 @@ public class LuaLex
             else if (_cur_char == '$') 
             {
                 _NextChar();
-                return _NewToken4String("$", _cur_idx - 2, 2);
+                var tk = _NewToken4String("$", _cur_idx - 2, 2);
+                return tk;
             }
-            else if (_cur_char == dollar_char){
-                dollar_char = '\0';// 结束了
+            else if (_cur_char == limit_char){
+                // 允许 $ 结尾 , 结束 $string
                 _NextChar();
-                return _NewToken4String("$", _cur_idx - 2, 1);// 允许 $ 结尾 
+                var tk = _NewToken4String("$", _cur_idx - 2, 1);
+                tk.IsEnded = true;
+                return tk;
             }
             else
             {
@@ -697,16 +869,11 @@ public class LuaLex
             }
         }
         
-        var tok = _ReadLineStringUtil(dollar_char, '$');
-        if (_cur_char == dollar_char) {
-            dollar_char = '\0';
+        var tok = _ReadLineStringUtil(limit_char, '$');
+        if (_cur_char == limit_char) {
             _NextChar();
+            tok.IsEnded = true;// 正常结束了
             return tok;
-        }
-        else if(_cur_char == '\n' && tok.m_str_flag != TokenStrFlag.Started) {
-            // 意外结束了。
-            dollar_char = '\0';
-            tok.MarkError("unfinished <$string>");
         }
         return tok;
     }
@@ -748,20 +915,35 @@ public class LuaLex
     }
 
     // --[=*[ comment ]=*]
-    Token _ReadLongComment()
+    Token _ReadLongComment(bool is_middle = false)
     {
-        Debug.Assert(_cur_char == '[');
-        int start_idx = _cur_idx - 2;
-        int sep = _SkipAndCountEqualSign();
+        int sep,start_idx;
+        if (is_middle){
+            sep = m_equal_sep_num;
+            start_idx = 0;
+            Debug.Assert(sep >= 2 && _cur_idx == 0);
+        }
+        else{
+            Debug.Assert(_cur_char == '[');
+            start_idx = _cur_idx - 2;
+            sep = _SkipAndCountEqualSign();
+        }
         if (sep >= 2){
             // 多行注释
             bool ended = _TryReadLongStringToEnd(sep);
             var tok = new Token(TokenType.Commnet);
             tok.SetRange(start_idx, _cur_idx);
-            tok.m_str_sep_num = sep;
+            tok.AddStrFlag(TokenStrFlag.RawComment);
+            tok.m_equal_sep_num = sep;
             if (!ended){
                 Debug.Assert(IsAtEnd);
-                tok.m_str_flag = TokenStrFlag.Started;
+                if(IsInDollarMode){
+                    // $string 里不支持多行字符串
+                    tok.MarkError("raw comment not support multline in $string");
+                }
+                else{
+                    tok.IsStarted = true;
+                }
             }
             return tok;
         }
@@ -784,20 +966,36 @@ public class LuaLex
     }
 
     // [=*[ xxx ]=*]
-    Token _ReadRawString()
+    Token _ReadRawString(bool is_middle = false)
     {
-        Debug.Assert(_cur_char == '[' || _cur_char == '=');
-        int start_idx = _cur_idx - 1;
-        int sep = _SkipAndCountEqualSign('[');
+        int sep,start_idx;
+        if (is_middle){
+            sep = m_equal_sep_num;
+            start_idx = 0;
+            Debug.Assert(sep >= 2 && _cur_idx == 0);
+        }
+        else{
+            Debug.Assert(_cur_char == '[' || _cur_char == '=');
+            start_idx = _cur_idx - 1;
+            Debug.Assert(_line[start_idx] == '[');
+            sep = _SkipAndCountEqualSign('[');
+        }
         if (sep >= 2){
             // 多行字符串
             bool ended = _TryReadLongStringToEnd(sep);
             var tok = new Token(TokenType.STRING);
+            tok.AddStrFlag(TokenStrFlag.RawString);
             tok.SetRange(start_idx, _cur_idx);
-            tok.m_str_sep_num = sep;
+            tok.m_equal_sep_num = sep;
             if (!ended){
                 Debug.Assert(IsAtEnd);
-                tok.m_str_flag = TokenStrFlag.Started;
+                if(IsInDollarMode){
+                    // $string 里不支持多行字符串
+                    tok.MarkError("raw string not support multline in $string");
+                }
+                else{
+                    tok.IsStarted = true;
+                }
             }
             return tok;
         }
@@ -810,17 +1008,22 @@ public class LuaLex
         }
     }
 
-    Token _ReadString(){
-        str_limit_char = _cur_char;
-        char del = _cur_char;
-        _NextChar();
+    Token _ReadString(char del){
         var tok = _ReadLineStringUtil(del, del);
         if (_cur_char == del){
             _NextChar();
         }
-        else if(_cur_char == '\n' && tok.m_str_flag != TokenStrFlag.Started) {
-            // 意外结束了。
-            tok.MarkError("unfinished string");
+        else if(IsAtEnd) {
+            if (tok.IsStarted) {
+                if (IsInDollarMode){
+                    tok.MarkError("string not support multline in $string");
+                    tok.IsStarted = false;
+                }
+            }
+            else{
+                // 意外结束了。
+                tok.MarkError("unfinished string");
+            }
         }
         return tok;
     }
@@ -832,14 +1035,14 @@ public class LuaLex
         int start_idx = _cur_idx;
         if (is_start_with_dot){
             start_idx -= 1;
-            Debug.Assert(_content[start_idx] == '.');
+            Debug.Assert(_line[start_idx] == '.');
         }
         do{
             _NextChar();
         }while(_cur_char == '.' || char.IsAsciiLetterLower(_cur_char));
 
         var tok = new Token(TokenType.NUMBER);
-        tok.SetMyRange(_content.SubRange(start_idx, _cur_idx - start_idx));
+        tok.SetRange(start_idx, _cur_idx);
         return tok;
     }
 }
