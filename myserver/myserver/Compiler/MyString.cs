@@ -272,6 +272,7 @@ class MyFile{
         var lex = new LuaLex();
         foreach (var line in m_lines){
             lex.ParseOneLine(line, pre_line);
+            pre_line = line;
         }
     }
 }
@@ -281,13 +282,14 @@ class MyFile{
 词法解析是以行为单位的。开始解析时，有多种初始状态。
 1. 正常模式
 2. " or ' 的字符串触发了 \ 结尾换行。
-    - 以 $ 开头
+    - 以 $ 开头的 Dollar 模式
+    - \z 触发的 Zip 模式
 3. [=*[ string ]=*] 的后续行。
 4. --[=*[ comment ]=*] 的后续行。
 */
 public class MyLine{
     public MyLine(string row_line, int row_idx){
-        m_chars = row_line.ToArray();
+        m_content = row_line;
         m_row_idx = row_idx;
         _CalTabSize();
     }
@@ -295,7 +297,8 @@ public class MyLine{
     public TokenStrFlag m_parse_flag = TokenStrFlag.Normal;
     public int m_equal_sep_num = 0;
 
-    public int Length => m_chars.Length;
+    public string Content => m_content;
+    public int Length => m_content.Length;
     public int RowIdx{
         get { return m_row_idx;}
         set { m_row_idx = value;}
@@ -306,22 +309,25 @@ public class MyLine{
     // 在行尾之后读取，统一都返回 \n
     public char this[int index]
     {
-        get { return index < Length ? m_chars[index] : '\n'; }
+        get { return index < Length ? m_content[index] : '\n'; }
     }
 
     void _CalTabSize(){
         m_tab_size = 0;
-        foreach (char c in m_chars){
+        foreach (char c in m_content){
             if (c == ' ') m_tab_size++;
             else if (c == '\t') m_tab_size += MyConfig.TabSize;
             else break;
         }
     }
 
+        // just for debug
+    public override string ToString() {
+        return m_content;
+    }
+
     List<Token> m_tokens = new List<Token>();
-
-
-    readonly char[] m_chars = default;
+    string m_content = default;
     int m_tab_size = 0;
     int m_row_idx = 0;
 }

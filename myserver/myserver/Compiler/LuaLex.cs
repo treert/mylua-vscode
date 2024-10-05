@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Data.Common;
 using System.Diagnostics;
 using System.Linq;
+using System.Net.Security;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -96,10 +97,10 @@ public enum TokenStrFlag
     Dollar              = 1<<6,// 纯标记
     RawString           = 1<<7,
     RawComment          = 1<<8,
-    ZipMode             = 1<<9,// for \z, 只用于 sub_tok
+    ZipMode             = 1<<9,// for \z, 同时也标记 sub_tok
     DollarDoubleQuote   = Dollar | DoubleQuote,
     DollarSingleQuote   = Dollar | SingleQuote,
-    OnlyStrMask = SingleQuote | DoubleQuote | Dollar | RawString | RawComment,// 用于获取 str flag
+    OnlyStrMask = SingleQuote | DoubleQuote | Dollar | RawString | RawComment | ZipMode,// 用于获取 str flag
 }
 
 public class Token
@@ -110,6 +111,12 @@ public class Token
     public string str;
 
     public string ErrMsg => err_msg;
+
+    // just for debug
+    public override string ToString() {
+        // if (str != null) { return str;}
+        return src_line.Content.Substring(start_idx, end_idx - start_idx);
+    }
 
     public TokenStrFlag m_str_flag = TokenStrFlag.Normal;
     public void AddStrFlag(TokenStrFlag flag){
@@ -270,7 +277,7 @@ public class LexError
 public class LuaLex
 {
     public bool IsInDollarMode => (m_cur_parse_flag&TokenStrFlag.Dollar) != 0;
-
+    public bool IsInZipMode => (m_cur_parse_flag&TokenStrFlag.ZipMode) != 0;
 
     char DollarChar {
         get {
@@ -290,22 +297,14 @@ public class LuaLex
 
     TokenStrFlag m_cur_parse_flag = TokenStrFlag.Normal;
     int m_equal_sep_num = 0;
+    int m_dollar_open_cnt;
     void ResetParseFlag(){
         m_equal_sep_num = 0;
         m_cur_parse_flag = TokenStrFlag.Normal;
         m_dollar_open_cnt = 0;
     }
 
-    // todo 这个要作废了
-    public void Init(MyString.Range content)
-    {
-        _cur_idx = -1;
-        _NextChar();// ready for read token
-
-        m_dollar_open_cnt = 0;
-    }
-
-    public void ParseOneLine(MyLine line, MyLine pre_line = null, bool only_if_flag_changed = false){
+    public bool ParseOneLine(MyLine line, MyLine pre_line = null, bool only_if_flag_changed = false){
         m_dollar_open_cnt = 0;
         m_equal_sep_num = 0;
         m_cur_parse_flag = TokenStrFlag.Normal;
@@ -319,7 +318,7 @@ public class LuaLex
         }
         if (only_if_flag_changed){
             if (m_equal_sep_num == line.m_equal_sep_num && m_cur_parse_flag == line.m_parse_flag){
-                return;// do nothing
+                return false;// do nothing
             }
         }
         // 开始解析
@@ -347,8 +346,8 @@ public class LuaLex
                 pre_tok.MarkToName();
             }
         }
-        // 处理下换行标记
-        if (last_tok.IsEndOfLine){ // 没读到任何token，需要特殊处理下多行字符串
+        // 没读到任何token，需要特殊处理下多行字符串
+        if (last_tok.IsEndOfLine){
             if (m_cur_parse_flag == TokenStrFlag.RawComment || m_cur_parse_flag == TokenStrFlag.RawString){
                 // 增加中间段的空行
                 var tk = _NewToken4String("", 0, 0);
@@ -358,11 +357,20 @@ public class LuaLex
                 line.Tokens.Add(tk);
             }
             else if (m_cur_parse_flag != TokenStrFlag.Normal){
-                // 强制结束掉
-                var tk = _NewToken4String("", 0, 0);
-                tk.IsEnded = true;
-                tk.MarkError("string need End or NewLine");
-                line.Tokens.Add(tk);
+                if (IsInZipMode){
+                    // zip 模式的中间行
+                    var tk = _NewToken4String("", 0, 0);// 其实区域无所谓
+                    tk.IsStarted = true;
+                    tk.AddStrFlag(m_cur_parse_flag);
+                    line.Tokens.Add(tk);
+                }
+                else{
+                    // 强制结束掉
+                    var tk = _NewToken4String("", 0, 0);
+                    tk.IsEnded = true;
+                    tk.MarkError("unexpect end with empty line");
+                    line.Tokens.Add(tk);
+                }
             }
         }
         else if (IsInDollarMode){
@@ -389,6 +397,7 @@ public class LuaLex
                 }
             }
         }
+        return true;
     }
 
     static bool IsWordLetter(char c)
@@ -402,8 +411,6 @@ public class LuaLex
     }
 
     StringBuilder _buf = new StringBuilder();
-
-    int m_dollar_open_cnt;
 
 
     MyLine _line;
@@ -431,12 +438,6 @@ public class LuaLex
     {
         bool ok = _cur_char == ch;
         if (ok) { _NextChar(); }
-        return ok;
-    }
-
-    bool _Check2ThenSkip(char ch1, char ch2){
-        bool ok = _cur_char == ch1 || _cur_char == ch2;
-        if (ok) _NextChar();
         return ok;
     }
 
@@ -553,12 +554,27 @@ public class LuaLex
         return null;
     }
 
-    Token _ReadNextToken()
+    Token _ReadNextToken(){
+        var tk = __ReadNextToken();
+        tk.src_line = _line;
+        return tk;
+    }
+
+    Token __ReadNextToken()
     {
+        if (IsInZipMode){
+            // 忽略掉开头的空白
+            Debug.Assert(_cur_idx == 0);
+            while(!IsAtEnd && char.IsWhiteSpace(_cur_char)){
+                _NextChar();
+            }
+        }
         if (IsAtEnd) {
             var tok = _NewToken(TokenType.EOL, _cur_idx, _cur_idx);
             return tok;
         }
+        // 可以退出 Zip模式了
+        m_cur_parse_flag &= ~TokenStrFlag.ZipMode;
 
         if (m_dollar_open_cnt == 0 && m_cur_parse_flag != TokenStrFlag.Normal){
             if (IsInDollarMode) {
@@ -575,7 +591,7 @@ public class LuaLex
                 // 一些字符串换行模式。
                 var tok = _ReadMiddleToken();
                 if (!tok.IsStarted){
-                    // 主动结束掉
+                    // 正常结束
                     tok.IsEnded = true;
                     ResetParseFlag();
                 }
@@ -689,7 +705,7 @@ public class LuaLex
                     else return _NewToken4OneChar('.', _cur_idx - 1);
                 default: {
                     if (char.IsDigit(_cur_char)) return _ReadNumber();
-                    else if (IsWordLetter(_cur_char)) _ReadNameOrKeyword();
+                    else if (IsWordLetter(_cur_char)) return _ReadNameOrKeyword();
                     else if(char.IsAscii(_cur_char)) {/* single-char tokens ('+', '*', '%', '{', '}', ...) */
                         var tok = _NewTokenForCurChar(); // 可能是错误的，由 parser 来 Mark
                         if (DollarChar != '\0') {
@@ -803,6 +819,7 @@ public class LuaLex
                             if (IsAtEnd) {
                                 tok.AddSubToken(sub_tok);
                                 tok.IsStarted = true;// 换行，触发多行逻辑
+                                tok.AddStrFlag(TokenStrFlag.ZipMode);
                                 goto finish_read;
                             }
                             else{
@@ -961,6 +978,7 @@ public class LuaLex
         }
         // 直接到行尾
         var tok = new Token(TokenType.Commnet);
+        _cur_idx = _line.Length;// 直接读到最后
         tok.SetRange(start_idx, _line.Length);
         return tok;
     }
