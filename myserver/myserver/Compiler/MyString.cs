@@ -245,11 +245,15 @@ public class MyString
 }
 
 
-class MyFile{
+public class MyFile{
     public List<MyLine> m_lines = [];
 
     public MyFile(string[] lines){
         _Ctor(lines);
+    }
+
+    public MyLine GetLine(int index){
+        return m_lines.Count > index ? m_lines[index] : null;
     }
     
     public MyFile(string filepath){
@@ -305,6 +309,32 @@ public class MyLine{
     }
     public int TabSize => m_tab_size;
     public List<Token> Tokens => m_tokens;
+
+    public Token GetToken(int idx){
+        if(m_tokens.Count > idx){
+            return m_tokens[idx];
+        }
+        return Token.EndOfLine;
+    }
+
+    // 获取最后的token，如果是空的返回 EndOfLine
+    public Token LastToken{
+        get{
+            if (m_tokens.Count == 0){
+                return Token.EndOfLine;
+            }
+            return m_tokens.Last();
+        }
+    }
+
+    public void ClearTokens(){
+        m_tokens.Clear();
+    }
+
+    public void AddToken(Token tk){
+        tk.tok_idx = m_tokens.Count;
+        m_tokens.Add(tk);
+    }
 
     // 在行尾之后读取，统一都返回 \n
     public char this[int index]

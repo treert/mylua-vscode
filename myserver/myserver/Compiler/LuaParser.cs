@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -277,27 +278,67 @@ public class LuaParser {
         return ParseModule();
     }
 
-    private Token LookAhead(){
+    // 解析文件局部形成语法树
+    public SyntaxTree Parse(MyFile myfile){
+        m_file = myfile;
+        m_cur_line = myfile.m_lines.Count > 0 ? myfile.m_lines.Last() : null;
+        m_cur_tok_idx = -1;// 特殊构建
+        m_ahead_tok = null;
+        m_ahead2_tok = null;
         return null;
-        // return _lex.LookAhead();
+    }
+
+    private Token LookAhead(){
+        if (m_ahead_tok == null){
+            m_ahead_tok = _ReadNextToken();
+        }
+        return m_ahead_tok;
     }
 
     private Token LookAhead2(){
-        return null;
-        // return _lex.LookAhead2();
+        LookAhead();
+        if (m_ahead2_tok == null){
+            m_ahead2_tok = _ReadNextToken();
+        }
+        return m_ahead2_tok;
     }
 
-    private Token NextToken(){
-        return null;
-        // return _lex.NextToken();
+    Token NextToken(){
+        if (m_ahead_tok != null){
+            var tok = m_ahead_tok;
+            m_ahead_tok = m_ahead2_tok;
+            return tok;
+        }
+        return _ReadNextToken();
+    }
+
+    private Token _ReadNextToken(){
+        if (m_cur_line is not null){
+            m_cur_tok_idx ++;
+            var tok = m_cur_line.GetToken(m_cur_tok_idx);
+            if (tok.IsEndOfLine){
+                m_cur_tok_idx = 0;
+                for (;;) {
+                    m_cur_line = m_file.GetLine(m_cur_line.RowIdx);
+                    if (m_cur_line is null) break;
+                    tok = m_cur_line.GetToken(0);
+                    if (tok.IsEndOfLine == false) break;
+                }
+            }
+            return tok;
+        }
+        return Token.EndOfLine;
     }
 
     private void ThrowParseException(string message){
         throw new ParseException(message);
     }
 
-    private LuaLex _lex = new LuaLex();
-
+    MyFile m_file;
+    MyLine? m_cur_line;
+    int m_cur_tok_idx;
+    Token? m_ahead_tok = Token.EndOfLine;
+    Token? m_ahead2_tok = Token.EndOfLine;
 }
 
 

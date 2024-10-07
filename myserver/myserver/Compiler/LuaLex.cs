@@ -105,6 +105,8 @@ public enum TokenStrFlag
 
 public class Token
 {
+    // 结束标记。属于是无效 token
+    public static readonly Token EndOfLine = new Token(TokenType.EOL);
     public int type;
     public long num_int;
     public double num_double;
@@ -150,12 +152,13 @@ public class Token
         }
     }
 
-    public bool IsEndOfLine => Match(TokenType.EOL);
+    public bool IsEndOfLine => Match(TokenType.EOL);// 其实可以直接用 == EndOfLine
 
 
     public MyLine src_line;
     public int start_idx;
     public int end_idx;// end idx is exclusive
+    public int tok_idx;// tokens 数组索引
 
     public string err_msg = string.Empty;// 如果不为空，说明有错误
     public List<Token> m_sub_toks = null;
@@ -324,17 +327,17 @@ public class LuaLex
         // 开始解析
         line.m_parse_flag = m_cur_parse_flag;
         line.m_equal_sep_num = m_equal_sep_num;
-        line.Tokens.Clear();
+        line.ClearTokens();
         _line = line;
         _cur_idx = -1;
         _NextChar();// ready for read token
 
-        Token pre_tok = new Token(TokenType.EOL);
-        Token last_tok = new Token(TokenType.EOL);
+        Token pre_tok = Token.EndOfLine;
+        Token last_tok = Token.EndOfLine;
         for(;;){
             var cur_tok = _ReadNextToken();
             if (cur_tok.IsEndOfLine) break;
-            line.Tokens.Add(cur_tok);
+            line.AddToken(cur_tok);
             last_tok = cur_tok;
             if (cur_tok.IsKeyword()){
                 if (pre_tok.Match('.') || pre_tok.Match(TokenType.DBCOLON) || pre_tok.Match(Keyword.GOTO)){
@@ -354,7 +357,7 @@ public class LuaLex
                 tk.IsStarted = true;
                 tk.AddStrFlag(m_cur_parse_flag);
                 tk.m_equal_sep_num = m_equal_sep_num;
-                line.Tokens.Add(tk);
+                line.AddToken(tk);
             }
             else if (m_cur_parse_flag != TokenStrFlag.Normal){
                 if (IsInZipMode){
@@ -362,14 +365,14 @@ public class LuaLex
                     var tk = _NewToken4String("", 0, 0);// 其实区域无所谓
                     tk.IsStarted = true;
                     tk.AddStrFlag(m_cur_parse_flag);
-                    line.Tokens.Add(tk);
+                    line.AddToken(tk);
                 }
                 else{
                     // 强制结束掉
                     var tk = _NewToken4String("", 0, 0);
                     tk.IsEnded = true;
                     tk.MarkError("unexpect end with empty line");
-                    line.Tokens.Add(tk);
+                    line.AddToken(tk);
                 }
             }
         }
@@ -570,7 +573,7 @@ public class LuaLex
             }
         }
         if (IsAtEnd) {
-            var tok = _NewToken(TokenType.EOL, _cur_idx, _cur_idx);
+            var tok = Token.EndOfLine;
             return tok;
         }
         // 可以退出 Zip模式了
@@ -725,7 +728,7 @@ public class LuaLex
                 }
             }
         }
-        return _NewToken(TokenType.EOL, _cur_idx, _cur_idx);
+        return Token.EndOfLine;
     }
 
     Token _NewTokenForCurChar()
