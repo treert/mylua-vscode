@@ -1,0 +1,9 @@
+{
+  "profiles": {
+    "myserver": {
+      "commandName": "Project",
+      "commandLineArgs": "",
+      "workingDirectory": "../test"
+    }
+  }
+}

@@ -10,7 +10,7 @@ using Protocol = MyServer.Protocol;
 My.Logger.Info("Hello World");
 My.Logger.Info($"pwd={Environment.CurrentDirectory}");
 
-var lines = File.ReadAllLines(@"C:\Users\onemore\Desktop\MyTmp\mylua\test.lua");
+var lines = File.ReadAllLines(@".\test.mylua");
 
 MyFile myFile= new MyFile(lines);
 myFile.ParseTokens();
