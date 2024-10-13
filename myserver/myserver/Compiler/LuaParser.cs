@@ -285,6 +285,8 @@ public class LuaParser {
         m_cur_tok_idx = -1;// 特殊构建
         m_ahead_tok = null;
         m_ahead2_tok = null;
+        m_tab_size_limit = 0;
+        m_line_idx_limit = -1;
         return null;
     }
 
@@ -292,7 +294,7 @@ public class LuaParser {
         if (m_ahead_tok == null){
             m_ahead_tok = _ReadNextToken();
         }
-        return m_ahead_tok;
+        return _ReturnRealToken(m_ahead_tok);
     }
 
     private Token LookAhead2(){
@@ -300,18 +302,34 @@ public class LuaParser {
         if (m_ahead2_tok == null){
             m_ahead2_tok = _ReadNextToken();
         }
-        return m_ahead2_tok;
+        return _ReturnRealToken(m_ahead2_tok);
     }
 
     Token NextToken(){
         if (m_ahead_tok != null){
             var tok = m_ahead_tok;
             m_ahead_tok = m_ahead2_tok;
-            return tok;
+            m_ahead2_tok = null;
+            return _ReturnRealToken(tok);
         }
-        return _ReadNextToken();
+        return _ReturnRealToken(_ReadNextToken());
     }
 
+    // 如果Token不满足当前限制，返回 EndOfLine。否则返回自己
+    Token _ReturnRealToken(Token token)
+    {
+        if (m_line_idx_limit >= 0){
+            // 只认当前行的
+            if (token.RowIdx != m_line_idx_limit) return Token.EndOfLine;
+        }
+        else if(m_tab_size_limit > 0){
+            // keyword must match tab limit
+            if (token.IsKeyword() && token.TabSize < m_tab_size_limit) return Token.EndOfLine;
+        }
+        return token;
+    }
+
+    // 文件内部读取下一个Token. 会把读取指针往后移动一位。
     private Token _ReadNextToken(){
         if (m_cur_line is not null){
             m_cur_tok_idx ++;
@@ -319,7 +337,7 @@ public class LuaParser {
             if (tok.IsEndOfLine){
                 m_cur_tok_idx = 0;
                 for (;;) {
-                    m_cur_line = m_file.GetLine(m_cur_line.RowIdx);
+                    m_cur_line = m_file.GetLine(m_cur_line.RowIdx + 1);
                     if (m_cur_line is null) break;
                     tok = m_cur_line.GetToken(0);
                     if (tok.IsEndOfLine == false) break;
@@ -337,6 +355,30 @@ public class LuaParser {
     MyFile m_file;
     MyLine? m_cur_line;
     int m_cur_tok_idx;
+
+    class MyParseLimitGuard : IDisposable
+    {
+        public MyParseLimitGuard(LuaParser parser, int tab_size_limit, int line_idx_limit = -1){
+            Parser = parser;
+            pre_line_idx_limit = parser.m_line_idx_limit;
+            pre_tab_size_limit = parser.m_tab_size_limit;
+            parser.m_line_idx_limit = line_idx_limit;
+            parser.m_tab_size_limit = tab_size_limit;
+        }
+        public void Dispose()
+        {
+            Parser.m_line_idx_limit = pre_line_idx_limit;
+            Parser.m_tab_size_limit = pre_tab_size_limit;
+        }
+
+        LuaParser Parser;
+        int pre_line_idx_limit = -1;
+        int pre_tab_size_limit = 0;
+    }
+
+    int m_line_idx_limit = -1;// 限制只读取特定行的token
+    int m_tab_size_limit = 0;// 限制token需要满足缩进规则
+
     Token? m_ahead_tok = Token.EndOfLine;
     Token? m_ahead2_tok = Token.EndOfLine;
 }

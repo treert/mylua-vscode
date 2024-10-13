@@ -107,6 +107,26 @@ public class Token
 {
     // 结束标记。属于是无效 token
     public static readonly Token EndOfLine = new Token(TokenType.EOL);
+    static Token()
+    {
+    }
+
+    // 获取行号。如果是EndOfLine，返回 -1
+    public int RowIdx {
+        get{
+            if (src_line != null) return src_line.RowIdx;
+            return -1;
+        }
+    }
+
+    // 获取缩进数量。如果是 EndOfLine , return 0
+    public int TabSize{
+        get{
+            if (src_line != null) return src_line.TabSize;
+            return 0;
+        }
+    }
+
     public int type;
     public long num_int;
     public double num_double;
@@ -116,6 +136,7 @@ public class Token
 
     // just for debug
     public override string ToString() {
+        if (IsEndOfLine) return "EndOfLine";
         // if (str != null) { return str;}
         return src_line.Content.Substring(start_idx, end_idx - start_idx);
     }
@@ -154,8 +175,7 @@ public class Token
 
     public bool IsEndOfLine => Match(TokenType.EOL);// 其实可以直接用 == EndOfLine
 
-
-    public MyLine src_line;
+    public MyLine src_line = null;// EndOfLine 时，这个是null
     public int start_idx;
     public int end_idx;// end idx is exclusive
     public int tok_idx;// tokens 数组索引
