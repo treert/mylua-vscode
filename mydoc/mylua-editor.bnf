@@ -32,8 +32,6 @@ stat ::=  ';' |
         'function' funcname funcbody |
         'local' 'function' Name funcbody |
         'local' attnamelist ['=' explist] |
-        dollar_func |
-        dollar_string
 
 attnamelist ::=  Name attrib {',' Name attrib}
 
@@ -58,7 +56,7 @@ namelist ::= Name {',' Name}
 
 explist ::= exp {',' exp}
 
-exp ::=  'nil' | 'false' | 'true' | Numeral | LiteralString | '...' | functiondef | 
+exp ::=  'nil' | 'false' | 'true' | Numeral | LiteralString | '...' | functiondef | dollar_string | dollar_func
         prefixexp | tableconstructor | array_constructor | exp binop exp | unop exp 
 
 args ::=  '(' [args_list] ')' | tableconstructor | LiteralString | dollar_string | dollar_func
@@ -67,7 +65,7 @@ args_list ::= { expr ',' } { Name '=' expr ','} { expr ',' } [ Trim ',' ]
 
 functiondef ::= function funcbody
 
-funcbody ::= '(' [parlist] ')' block end
+funcbody ::= '(' [parlist] ')' block 'end'
 
 # 允许结尾多一个 ','
 parlist ::= namelist [','] | namelist ',' '...' | '...'

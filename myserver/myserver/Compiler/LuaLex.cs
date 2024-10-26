@@ -5,6 +5,7 @@ using System.Data.Common;
 using System.Diagnostics;
 using System.Linq;
 using System.Net.Security;
+using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -37,6 +38,7 @@ public enum Keyword
     REPEAT,
     RETURN,
     TRUE,
+    THEN,
     WHILE,
 }
 
@@ -331,14 +333,16 @@ public class LuaLex
         m_dollar_open_cnt = 0;
         m_equal_sep_num = 0;
         m_cur_parse_flag = TokenStrFlag.Normal;
-        if (pre_line != null && pre_line.Tokens.Count > 0){
-            var tk = pre_line.Tokens.Last();
-            if (tk.IsStarted){
-                m_equal_sep_num = tk.m_equal_sep_num;
-                m_cur_parse_flag = tk.m_str_flag & TokenStrFlag.OnlyStrMask;
-                Debug.Assert(m_cur_parse_flag != TokenStrFlag.Normal);
+        {
+            if (pre_line.Tokens.LastOrDefault() is Token tk){
+                if (tk.IsStarted){
+                    m_equal_sep_num = tk.m_equal_sep_num;
+                    m_cur_parse_flag = tk.m_str_flag & TokenStrFlag.OnlyStrMask;
+                    Debug.Assert(m_cur_parse_flag != TokenStrFlag.Normal);
+                }
             }
         }
+
         if (only_if_flag_changed){
             if (m_equal_sep_num == line.m_equal_sep_num && m_cur_parse_flag == line.m_parse_flag){
                 return false;// do nothing

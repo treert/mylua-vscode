@@ -8,7 +8,20 @@ namespace MyServer.Compiler;
 
 public abstract class SyntaxTree
 {
+    public List<Token> err_tokens = [];
+    public string err_msg = "";
+    public Dictionary<Token, string> err_tk_map = [];
+    public void AddErrToken(Token token){
+        err_tokens.Add(token);
+    }
 
+    public void SetErrMsg(string msg){
+        err_msg = msg;
+    }
+
+    public void AddErrMsgToToken(Token token, string msg){
+        err_tk_map[token] = msg;
+    }
 }
 
 public abstract class ExpSyntaxTree : SyntaxTree
@@ -66,11 +79,18 @@ public class WhileStatement : SyntaxTree
     public BlockTree block;
 }
 
+public class DoStatement : SyntaxTree
+{
+    public BlockTree block;
+}
+
 public class IfStatement : SyntaxTree
 {
+
     public ExpSyntaxTree exp;
-    public BlockTree true_branch;
-    public SyntaxTree? false_branch;
+    public BlockTree then_branch;
+    public List<(ExpSyntaxTree exp, BlockTree? branch)> elseif_list = null;
+    public BlockTree else_branch = null;
 }
 
 public class ForNumStatement : SyntaxTree

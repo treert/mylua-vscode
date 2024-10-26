@@ -54,58 +54,123 @@ public class LuaParser {
         return block;
     }
 
+    BlockTree ParseBlock(int tab_size_limit, int line_idx_limit = -1)
+    {
+        using(new MyParseLimitGuard(this, tab_size_limit, line_idx_limit))
+        {
+            return ParseBlock();
+        }
+    }
+
+    // 解析一个区块，不过缩进限制大于最近的Token。
+    BlockTree ParseBlockLimitByLastToken(){
+        return ParseBlock(LastToken.TabSize + 1);
+    }
+
+    BlockTree ParseBlock(Token token){
+        return ParseBlock(token.TabSize + 1);
+    }
+
+    // 往后读到一个 keyword 为止。中间遇到的全部当成错误
+    void GoToNextKeyword(SyntaxTree root_tree, int line_idx_limit)
+    {
+        using(new MyParseLimitGuard(this, m_tab_size_limit, line_idx_limit)){
+            for(;;){
+                var tok = LookAhead();
+                if (tok.IsKeyword()) return;
+                if (tok.IsEndOfLine) return;// 结束了
+                root_tree.AddErrToken(NextToken());
+            }
+        }
+    }
+
+    MyParseLimitGuard _NewLimitGurad(Token token, int plus = 0)
+    {
+        return new MyParseLimitGuard(this, token.TabSize + plus);
+    }
+
     private IfStatement ParseIfStatement()
     {
-        NextToken();// if or elseif
+        var tok_if = NextToken();// if
+        Debug.Assert(tok_if.Match(Keyword.IF));
+
         var statement = new IfStatement();
-        var exp = ParseExp();
-        var true_branch = ParseBlock();
-        var false_branch = ParseFalseBranchStatement();
-
-        statement.exp = exp;
-        statement.true_branch = true_branch;
-        statement.false_branch = false_branch;
-        return statement;
+        Token tok_wait_end = null;
+        using(_NewLimitGurad(tok_if)){
+            statement.exp = ParseExp();
+            GoToNextKeyword(statement, LastToken.RowIdx);
+            // then
+            if (CheckAndNext(Keyword.THEN)){
+                tok_wait_end = LastToken;
+                statement.then_branch = ParseBlockLimitByLastToken();
+            }
+            else{
+                statement.AddErrMsgToToken(tok_if, "<if> miss <then>");
+                goto the_end;
+            }
+            GoToNextKeyword(statement, LastToken.RowIdx);
+            while(CheckAndNext(Keyword.ELSEIF)){
+                var elseif_tk = LastToken;
+                var exp = ParseExp();
+                GoToNextKeyword(statement, LastToken.RowIdx);
+                if (CheckAndNext(Keyword.THEN)){
+                    tok_wait_end = LastToken;
+                    var block = ParseBlockLimitByLastToken();
+                    statement.elseif_list.Add((exp, block));
+                }
+                else{
+                    statement.AddErrMsgToToken(elseif_tk, "<elseif> miss <then>");
+                    statement.elseif_list.Add((exp, null));
+                    goto the_end;
+                }
+            }
+            if (CheckAndNext(Keyword.ELSE)){
+                tok_wait_end = LastToken;
+                BlockTree block = ParseBlockLimitByLastToken();
+            }
+            GoToNextKeyword(statement, LastToken.RowIdx);
+            the_end:
+            if (!CheckAndNext(Keyword.END)){
+                if (tok_wait_end is not null)
+                    statement.AddErrMsgToToken(tok_wait_end, "miss <end>");
+            }
+            return statement;
+        }
     }
 
-    SyntaxTree? ParseFalseBranchStatement()
+    DoStatement ParseDoStatement()
     {
-        if (LookAhead().Match(Keyword.ELSEIF)){
-            return ParseIfStatement();
-        }
-        else if (LookAhead().Match(Keyword.ELSE))
-        {
-            NextToken();
-            var block = ParseBlock();
-            CheckAndNext(Keyword.END);
-            return block;
-        }
-        else{
-            // expect 'end' for 'if'
-            CheckAndNext(Keyword.END);
-            return null;
-        }
-    }
-
-    BlockTree ParseDoStatement()
-    {
+        DoStatement statement = new DoStatement();
         NextToken();// Skip 'do'
-        var statement = ParseBlock();
-        CheckAndNext(Keyword.END);
-        return statement;
+        var tk_do = LastToken;
+        using(_NewLimitGurad(tk_do))
+        {
+            statement.block = ParseBlockLimitByLastToken();
+            if (!CheckAndNext(Keyword.END)){
+                statement.AddErrMsgToToken(tk_do, "miss <end>");
+            }
+            return statement;
+        }
     }
 
     WhileStatement ParseWhileStatement()
     {
         NextToken();// skip 'while'
         var statement = new WhileStatement();
-        var exp = ParseExp();
-        CheckAndNext(Keyword.DO);
-        var block = ParseBlock();
-        CheckAndNext(Keyword.END);
-
-        statement.exp = exp;
-        statement.block = block;
+        var tk_while = LastToken;
+        Token tok_wait_end = null;
+        using (_NewLimitGurad(tk_while)){
+            var exp = ParseExp();
+            GoToNextKeyword(statement, LastToken.RowIdx);
+            if (CheckAndNext(Keyword.DO)){
+                tok_wait_end = LastToken;
+                statement.block = ParseBlockLimitByLastToken();
+            }
+            else{
+                CheckAndNext(Keyword.END);// 尽量吃掉一个吧。
+                statement.AddErrMsgToToken(tk_while, "miss <do>");
+            }
+        }
         return statement;
     }
 
@@ -247,18 +312,18 @@ public class LuaParser {
         return null;
     }
 
-    Token? CheckAndNext(Keyword keyword)
+    bool CheckAndNext(Keyword keyword)
     {
         var ahead = LookAhead();
         if (ahead.Match(keyword))
         {
-            return NextToken();
+            NextToken();
+            return true;
         }
-        ThrowParseException($"expect {keyword.ToString().ToLower()}");
-        return null;
+        return false;
     }
 
-    ExpSyntaxTree ParseExp()
+    ExpSyntaxTree ParseExp(int left_priority = 0)
     {
         return null;
     }
@@ -281,8 +346,8 @@ public class LuaParser {
     // 解析文件局部形成语法树
     public SyntaxTree Parse(MyFile myfile){
         m_file = myfile;
-        m_cur_line = myfile.m_lines.Count > 0 ? myfile.m_lines.Last() : null;
-        m_cur_tok_idx = -1;// 特殊构建
+        m_cur_line = myfile.m_lines.LastOrDefault();
+        m_next_tok_idx = 0;
         m_ahead_tok = null;
         m_ahead2_tok = null;
         m_tab_size_limit = 0;
@@ -305,14 +370,20 @@ public class LuaParser {
         return _ReturnRealToken(m_ahead2_tok);
     }
 
+    Token LastToken => m_last_tok;
+
+    // 所有的读取都要经过这个，会设置 m_last_tok, 并且会执行 _ReturnRealToken 逻辑
     Token NextToken(){
         if (m_ahead_tok != null){
             var tok = m_ahead_tok;
             m_ahead_tok = m_ahead2_tok;
             m_ahead2_tok = null;
-            return _ReturnRealToken(tok);
+            m_last_tok = _ReturnRealToken(tok);
         }
-        return _ReturnRealToken(_ReadNextToken());
+        else{
+            m_last_tok = _ReturnRealToken(_ReadNextToken());
+        }
+        return m_last_tok;
     }
 
     // 如果Token不满足当前限制，返回 EndOfLine。否则返回自己
@@ -323,8 +394,10 @@ public class LuaParser {
             if (token.RowIdx != m_line_idx_limit) return Token.EndOfLine;
         }
         else if(m_tab_size_limit > 0){
+            // 强力限制。如果遇到 字符串那种需要触发换行的。特殊处理好了
+            if (token.TabSize < m_tab_size_limit) return Token.EndOfLine;
             // keyword must match tab limit
-            if (token.IsKeyword() && token.TabSize < m_tab_size_limit) return Token.EndOfLine;
+            // if (token.IsKeyword() && token.TabSize < m_tab_size_limit) return Token.EndOfLine;
         }
         return token;
     }
@@ -332,10 +405,10 @@ public class LuaParser {
     // 文件内部读取下一个Token. 会把读取指针往后移动一位。
     private Token _ReadNextToken(){
         if (m_cur_line is not null){
-            m_cur_tok_idx ++;
-            var tok = m_cur_line.GetToken(m_cur_tok_idx);
+            var tok = m_cur_line.GetToken(m_next_tok_idx);
+            m_next_tok_idx ++;
             if (tok.IsEndOfLine){
-                m_cur_tok_idx = 0;
+                m_next_tok_idx = 1;// 必然要读一个token。所有一定是 1。
                 for (;;) {
                     m_cur_line = m_file.GetLine(m_cur_line.RowIdx + 1);
                     if (m_cur_line is null) break;
@@ -354,7 +427,7 @@ public class LuaParser {
 
     MyFile m_file;
     MyLine? m_cur_line;
-    int m_cur_tok_idx;
+    int m_next_tok_idx;
 
     class MyParseLimitGuard : IDisposable
     {
@@ -378,9 +451,9 @@ public class LuaParser {
 
     int m_line_idx_limit = -1;// 限制只读取特定行的token
     int m_tab_size_limit = 0;// 限制token需要满足缩进规则
-
-    Token? m_ahead_tok = Token.EndOfLine;
-    Token? m_ahead2_tok = Token.EndOfLine;
+    Token m_last_tok = Token.EndOfLine;// 当前的token，也是最近读到的token
+    Token? m_ahead_tok = null;
+    Token? m_ahead2_tok = null;
 }
 
 
