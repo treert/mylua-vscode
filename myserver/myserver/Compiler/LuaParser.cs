@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
 using NLog.LayoutRenderers.Wrappers;
@@ -81,6 +82,24 @@ public class LuaParser {
                 if (tok.IsKeyword()) return;
                 if (tok.IsNone) return;// 结束了
                 root_tree.AddErrToken(NextToken());
+            }
+        }
+    }
+
+    // 往后读到一个 keyword () {} [] 为止。中间遇到的全部当成错误
+    void GoToNextKeywordOrBracket(SyntaxTree tree, char ch = '\0'){
+        int line_idx_limit = LastToken.RowIdx;
+        using(new MyParseLimitGuard(this, m_tab_size_limit, line_idx_limit)){
+            for(;;){
+                var tok = LookAhead();
+                if (tok.IsNone) return;// 结束了
+                if (tok.IsKeyword() 
+                    || tok.Match(ch)
+                    || tok.Match('(',')')
+                    || tok.Match('{','}')
+                    || tok.Match('[',']')
+                    ) return;
+                tree.AddErrToken(NextToken());
             }
         }
     }
@@ -231,7 +250,6 @@ public class LuaParser {
 
     ForInStatement ParseForInStatement()
     {
-        var for_tk = LastToken;
         var statement = new ForInStatement();
         statement.names = ParseNameList();
         if (ExpectAndNextKeyword(statement, Keyword.IN)){
@@ -262,40 +280,104 @@ public class LuaParser {
 
     FunctionStatement ParseFunctionStatement()
     {
-        NextToken();// skip 'function'
-        var statement = new FunctionStatement();
-        statement.names = ParseNameList();
-        statement.func_body = ParseFunctionBody();
-        return statement;
-    }
-
-    List<Token> ParseFunctionName()
-    {
-        if (LookAhead().Match(TokenType.NAME) == false){
-            ThrowParseException("expect 'id' after 'function'");
-        }
-        var list = new List<Token>();
-        list.Add(NextToken());
-        while(LookAhead().Match('.'))
-        {
-            NextToken();
-            if(LookAhead().Match(TokenType.NAME))
-            {
-                ThrowParseException("unexpect token in function name after '.'");
+        var fn_tk = NextToken();// skip 'function'
+        using (_NewLimitGurad(fn_tk)){
+            var statement = new FunctionStatement();
+            statement.names = ParseNameList();
+            if (statement.names.Count == 0){
+                statement.AddErrMsg("function miss name");
             }
-            list.Add(NextToken());
+            if (CheckAndNext(':')){
+                if (LookAhead().Match(TokenType.NAME))
+                    statement.name_after_colon = NextToken();
+                else
+                    statement.AddErrMsgToToken(LastToken, "expect <name> after ':'");
+            }
+            statement.func_body = ParseFunctionBody(fn_tk);
+            statement.func_body.has_self = statement.name_after_colon.IsNone == false;
+            return statement;
         }
-        return list;
     }
 
-    FunctionBody ParseFunctionBody()
+    FunctionBody ParseFunctionBody(Token fn_tk)
     {
-        return null;
+        FunctionBody statment = new FunctionBody();
+        if (CheckAndNext('(')) {
+            statment.param_list = ParseParamList();
+        }
+        else{
+            statment.AddErrMsg("miss '(' to start params");
+        }
+        statment.block = ParseBlock(fn_tk);
+        ExpectAndNextKeyword(statment, Keyword.END);
+        return statment;
     }
+
+    ParamList ParseParamList()
+    {
+        NextToken();// skip '('
+        Debug.Assert(LastToken.Match('('));
+        ParamList ls = new ParamList();
+        ls.name_list = ParseNameList();
+        if (CheckAndNext(',')){
+            if (ls.name_list.Count == 0){
+                ls.AddErrMsgToToken(LastToken, "unexpect ','");
+            }
+            if (LookAhead().Match(TokenType.DOTS)){
+                NextToken();
+                ls.is_vararg = true;
+            }
+        }
+        else if (LookAhead().Match(TokenType.DOTS)){
+            NextToken();
+            ls.is_vararg = true;
+            if (ls.name_list.Count > 0){
+                ls.AddErrMsgToToken(LastToken, "expect ',' before '...'");
+            }
+        }
+        GoToNextKeywordOrBracket(ls, ')');
+        return ls;
+    }
+
 
     SyntaxTree ParseLocalStatement()
     {
-        return null;
+        var loc_tk = NextToken();
+        using var _ = _NewLimitGurad(loc_tk);
+        if (LookAhead().Match(Keyword.FUNCTION)){
+            var fn_tk = NextToken();
+            var statement = new LocalFunctionStatement();
+            if (LookAhead().Match(TokenType.NAME)){
+                statement.name = NextToken();
+            }
+            statement.function_body = ParseFunctionBody(fn_tk);
+            return statement;
+        }
+        else{
+            var statement = new LocalStatement();
+            while (LookAhead().Match(TokenType.NAME)){
+                var name = NextToken();
+                Token attr = Token.None;
+                if (CheckAndNext('<')){
+                    var left_tk = LastToken;
+                    if (CheckAndNext(TokenType.NAME)){
+                        attr = LastToken;
+                    }
+                    else{
+                        statement.AddErrMsgToToken(name, "invalid attribute");
+                    }
+                    if (!CheckAndNext('>')){
+                        statement.AddErrMsgToToken(left_tk, "miss '>'");
+                    }
+                }
+                statement.items.Add( (name, attr) );
+                if (!CheckAndNext(',')) break;
+            }
+            if (LookAhead().Match('=')){
+                statement.exp_list = ParseExpList();
+            }
+            return statement;
+        }
     }
 
     SyntaxTree ParseReturnStatement()
@@ -330,13 +412,16 @@ public class LuaParser {
 
     bool ExpectAndNextKeyword(SyntaxTree syntax, Keyword keyword){
         GoToNextKeyword(syntax);
-        var ahead = LookAhead();
-        if (ahead.Match(keyword))
-        {
-            NextToken();
-            return true;
-        }
-        syntax.AddErrMsg($"miss <{keyword.ToString().ToLower()}>");
+        if (!CheckAndNext(keyword))
+            syntax.AddErrMsg($"miss <{keyword.ToString().ToLower()}>");
+        return false;
+    }
+
+    bool ExpectAndNext(SyntaxTree syntax, char ch){
+        // 除了 keyword () {} [] 全部过滤掉
+        GoToNextKeywordOrBracket(syntax, ch);
+        if (!CheckAndNext(ch))
+            syntax.AddErrMsg($"miss '{ch}'");
         return false;
     }
 
@@ -344,6 +429,26 @@ public class LuaParser {
     {
         var ahead = LookAhead();
         if (ahead.Match(keyword))
+        {
+            NextToken();
+            return true;
+        }
+        return false;
+    }
+
+    bool CheckAndNext(char ch){
+        var ahead = LookAhead();
+        if (ahead.Match(ch))
+        {
+            NextToken();
+            return true;
+        }
+        return false;
+    }
+
+    bool CheckAndNext(TokenType tokenType){
+        var ahead = LookAhead();
+        if (ahead.Match(tokenType))
         {
             NextToken();
             return true;
@@ -363,19 +468,12 @@ public class LuaParser {
 
     FunctionBody ParseModule(){
         return null;
-
-
-    }
-    public SyntaxTree Parse(MyString.Range content){
-        // _lex.Init(content);
-        return ParseModule();
     }
 
     // 解析文件局部形成语法树
     public SyntaxTree Parse(MyFile myfile){
-        m_file = myfile;
-        m_cur_line = myfile.m_lines.LastOrDefault();
-        m_next_tok_idx = 0;
+        _inner_next_tok = myfile.GetFirstToken();
+
         m_ahead_tok = null;
         m_ahead2_tok = null;
         m_tab_size_limit = 0;
@@ -414,18 +512,18 @@ public class LuaParser {
         return m_last_tok;
     }
 
-    // 如果Token不满足当前限制，返回 EndOfLine。否则返回自己
+    // 如果Token不满足当前限制，返回 None。否则返回自己
     Token _ReturnRealToken(Token token)
     {
         if (m_line_idx_limit >= 0){
             // 只认当前行的
-            if (token.RowIdx != m_line_idx_limit) return Token.EndOfLine;
+            if (token.RowIdx != m_line_idx_limit) return Token.None;
         }
         else if(m_tab_size_limit > 0){
             // 强力限制。如果遇到 字符串那种需要触发换行的。特殊处理好了
-            if (token.TabSize < m_tab_size_limit) return Token.EndOfLine;
+            if (token.TabSize < m_tab_size_limit) return Token.None;
             // keyword must match tab limit
-            // if (token.IsKeyword() && token.TabSize < m_tab_size_limit) return Token.EndOfLine;
+            // if (token.IsKeyword() && token.TabSize < m_tab_size_limit) return Token.None;
         }
         return token;
     }
@@ -433,37 +531,17 @@ public class LuaParser {
     // 文件内部读取下一个Token. 会把读取指针往后移动一位。
     // 会过滤掉 comment
     private Token _ReadNextToken(){
-        if (m_cur_line is not null){
-            var tok = m_cur_line.GetToken(m_next_tok_idx);
-            m_next_tok_idx ++;
-            if (tok.IsNone || tok.IsComment){
-                m_next_tok_idx = 1;// 必然要读一个token。所有一定是 1。
-                for (;;) {
-                    m_cur_line = m_file.GetLine(m_cur_line.RowIdx + 1);
-                    if (m_cur_line is null) break;
-                    tok = m_cur_line.GetToken(0);
-                    if (tok.IsNone || tok.IsComment){
-                        continue;
-                    }
-                    else{
-                        return tok;
-                    }
-                }
-            }
-            else {
-                return tok;
-            }
-        }
-        return Token.EndOfLine;
+        var tok = _inner_next_tok;
+        while(tok.IsComment) tok = tok.NextToken;
+        _inner_next_tok = tok.NextToken;
+        return tok;
     }
 
     private void ThrowParseException(string message){
         throw new ParseException(message);
     }
 
-    MyFile m_file;
-    MyLine? m_cur_line;
-    int m_next_tok_idx;
+    Token _inner_next_tok = Token.None;// 内部用这个token往后读
 
     class MyParseLimitGuard : IDisposable
     {
@@ -487,7 +565,7 @@ public class LuaParser {
 
     int m_line_idx_limit = -1;// 限制只读取特定行的token
     int m_tab_size_limit = 0;// 限制token需要满足缩进规则
-    Token m_last_tok = Token.EndOfLine;// 当前的token，也是最近读到的token
+    Token m_last_tok = Token.None;// 当前的token，也是最近读到的token
     Token? m_ahead_tok = null;
     Token? m_ahead2_tok = null;
 }

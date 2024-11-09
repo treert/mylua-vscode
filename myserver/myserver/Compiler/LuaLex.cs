@@ -108,8 +108,8 @@ public enum TokenStrFlag
 
 public class Token
 {
-    // 结束标记。属于是无效 token
-    public static readonly Token EndOfLine = new Token(TokenType.None);
+    // 空token，用作标记
+    public static readonly Token None = new Token(TokenType.None);
     static Dictionary<string, Keyword> keywords = [];
     static Token()
     {
@@ -136,7 +136,7 @@ public class Token
                     if (line is not null) return line.Tokens[0];
                 }
             }
-            return Token.EndOfLine;
+            return Token.None;
         }
     }
 
@@ -154,11 +154,11 @@ public class Token
                     if (line is not null) return line.LastToken;
                 }
             }
-            return Token.EndOfLine;
+            return Token.None;
         }
     }
 
-    // 获取行号。如果是EndOfLine，返回 -1
+    // 获取行号。如果是 None，返回 -1
     public int RowIdx {
         get{
             if (src_line != null) return src_line.RowIdx;
@@ -166,7 +166,7 @@ public class Token
         }
     }
 
-    // 获取缩进数量。如果是 EndOfLine , return 0
+    // 获取缩进数量。如果是 None , return 0
     public int TabSize{
         get{
             if (src_line != null) return src_line.TabSize;
@@ -174,7 +174,7 @@ public class Token
         }
     }
 
-    public int type;
+    public int type = 0;
     public long num_int;
     public double num_double;
     public string str;
@@ -220,11 +220,11 @@ public class Token
         }
     }
 
-    public bool IsNone => Match(TokenType.None);// 其实可以直接用 == EndOfLine
+    public bool IsNone => Match(TokenType.None);// 其实可以直接用 == None
 
     public bool IsComment => Match(TokenType.Commnet);
 
-    public MyLine src_line = null;// EndOfLine 时，这个是null
+    public MyLine src_line = null;// None 时，这个是null
     public int start_idx;
     public int end_idx;// end idx is exclusive
     public int tok_idx;// tokens 数组索引
@@ -366,6 +366,7 @@ public class LuaLex
         m_dollar_open_cnt = 0;
     }
 
+    // 返回是否触发解析。如果什么都没变 没必要解析
     public bool ParseOneLine(MyLine line, MyLine pre_line = null, bool only_if_flag_changed = false){
         m_dollar_open_cnt = 0;
         m_equal_sep_num = 0;
@@ -393,8 +394,8 @@ public class LuaLex
         _cur_idx = -1;
         _NextChar();// ready for read token
 
-        Token pre_tok = Token.EndOfLine;
-        Token last_tok = Token.EndOfLine;
+        Token pre_tok = Token.None;
+        Token last_tok = Token.None;
         for(;;){
             var cur_tok = _ReadNextToken();
             if (cur_tok.IsNone) break;
@@ -634,7 +635,7 @@ public class LuaLex
             }
         }
         if (IsAtEnd) {
-            var tok = Token.EndOfLine;
+            var tok = Token.None;
             return tok;
         }
         // 可以退出 Zip模式了
@@ -789,7 +790,7 @@ public class LuaLex
                 }
             }
         }
-        return Token.EndOfLine;
+        return Token.None;
     }
 
     Token _NewTokenForCurChar()

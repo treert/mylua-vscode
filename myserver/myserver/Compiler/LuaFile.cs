@@ -19,21 +19,5 @@ namespace MyServer.Compiler;
  */
 public class LuaFile
 {
-    public LuaFile(string content)
-    {
-        m_content.ResetString(content);
-    }
-
-    public static LuaFile CreateFromFile(string path)
-    {
-        var content = File.ReadAllText(path).ReplaceLineEndings();
-        var file = new LuaFile(content);
-        return file;
-    }
-
-    private static readonly char[] s_eol_chs = new char[] { '\n', '\r'};
-
-    private MyString m_content = new MyString();
-
-    private LuaLex m_lex = new LuaLex();
+    
 }

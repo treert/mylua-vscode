@@ -54,9 +54,22 @@ public class BlockTree : SyntaxTree
     public List<SyntaxTree> statements = [];
 }
 
+public class LocalStatement : SyntaxTree
+{
+    public List<(Token name, Token Attribute)> items = [];
+    public ExpressionList exp_list;
+}
+
+public class LocalFunctionStatement : SyntaxTree
+{
+    public Token name = Token.None;
+    public FunctionBody function_body;
+}
+
 public class FunctionBody : SyntaxTree
 {
     public ParamList param_list;
+    public bool has_self = false;// 是否有语法糖增加的self
     public BlockTree block;
 }
 
@@ -130,6 +143,7 @@ public class ForInStatement : SyntaxTree
 public class FunctionStatement : SyntaxTree
 {
     public List<Token> names;
+    public Token name_after_colon = Token.None;// XXX:Name 的 Name
     public FunctionBody func_body;
 }
 
