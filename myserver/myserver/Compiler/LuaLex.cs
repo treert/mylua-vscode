@@ -44,7 +44,8 @@ public enum Keyword
 
 public enum TokenType
 {
-    EOL = 256,// 不设置成0了，源码里不能有0
+    // 空token，用于标记：行尾，文件尾，无效token
+    None = 256,// 不设置成0了，源码里不能有0
 
     DIVIDE, // // 整除
     CONCAT,// .. string concat
@@ -108,9 +109,53 @@ public enum TokenStrFlag
 public class Token
 {
     // 结束标记。属于是无效 token
-    public static readonly Token EndOfLine = new Token(TokenType.EOL);
+    public static readonly Token EndOfLine = new Token(TokenType.None);
+    static Dictionary<string, Keyword> keywords = [];
     static Token()
     {
+        var arr = Enum.GetValues(typeof(Keyword));
+        for (int i = 0; i < arr.Length; i++)
+        {
+            var obj = arr.GetValue(i)!;
+            Keyword key = (Keyword)obj;
+            keywords.Add(key.ToString().ToLower(), key);
+        }
+    }
+
+    public Token NextToken {
+        get {
+            if (src_line != null) {
+                int idx = tok_idx + 1;
+                if (src_line.Tokens.Count > idx){
+                    return src_line.Tokens[idx];
+                }
+                else{
+                    // 找一个有效的
+                    MyLine line = src_line.NextLine;
+                    while(line != null && line.Tokens.Count > 0) line = line.NextLine;
+                    if (line is not null) return line.Tokens[0];
+                }
+            }
+            return Token.EndOfLine;
+        }
+    }
+
+    public Token PreToken{
+        get{
+            if (src_line != null) {
+                int idx = tok_idx - 1;
+                if (idx >= 0){
+                    return src_line.Tokens[idx];
+                }
+                else{
+                    // 找一个有效的
+                    MyLine line = src_line.PreLine;
+                    while(line != null && line.Tokens.Count > 0) line = line.PreLine;
+                    if (line is not null) return line.LastToken;
+                }
+            }
+            return Token.EndOfLine;
+        }
     }
 
     // 获取行号。如果是EndOfLine，返回 -1
@@ -138,7 +183,7 @@ public class Token
 
     // just for debug
     public override string ToString() {
-        if (IsEndOfLine) return "EndOfLine";
+        if (IsNone) return "<None>";
         // if (str != null) { return str;}
         return src_line.Content.Substring(start_idx, end_idx - start_idx);
     }
@@ -175,7 +220,9 @@ public class Token
         }
     }
 
-    public bool IsEndOfLine => Match(TokenType.EOL);// 其实可以直接用 == EndOfLine
+    public bool IsNone => Match(TokenType.None);// 其实可以直接用 == EndOfLine
+
+    public bool IsComment => Match(TokenType.Commnet);
 
     public MyLine src_line = null;// EndOfLine 时，这个是null
     public int start_idx;
@@ -270,17 +317,7 @@ public class Token
         }
     }
 
-    static Dictionary<string, Keyword> keywords = [];
-    static Token()
-    {
-        var arr = Enum.GetValues(typeof(Keyword));
-        for (int i = 0; i < arr.Length; i++)
-        {
-            var obj = arr.GetValue(i)!;
-            Keyword key = (Keyword)obj;
-            keywords.Add(key.ToString().ToLower(), key);
-        }
-    }
+
 }
 
 public class LexError
@@ -334,7 +371,7 @@ public class LuaLex
         m_equal_sep_num = 0;
         m_cur_parse_flag = TokenStrFlag.Normal;
         {
-            if (pre_line.Tokens.LastOrDefault() is Token tk){
+            if (pre_line?.Tokens.LastOrDefault() is Token tk){
                 if (tk.IsStarted){
                     m_equal_sep_num = tk.m_equal_sep_num;
                     m_cur_parse_flag = tk.m_str_flag & TokenStrFlag.OnlyStrMask;
@@ -360,7 +397,7 @@ public class LuaLex
         Token last_tok = Token.EndOfLine;
         for(;;){
             var cur_tok = _ReadNextToken();
-            if (cur_tok.IsEndOfLine) break;
+            if (cur_tok.IsNone) break;
             line.AddToken(cur_tok);
             last_tok = cur_tok;
             if (cur_tok.IsKeyword()){
@@ -374,7 +411,7 @@ public class LuaLex
             }
         }
         // 没读到任何token，需要特殊处理下多行字符串
-        if (last_tok.IsEndOfLine){
+        if (last_tok.IsNone){
             if (m_cur_parse_flag == TokenStrFlag.RawComment || m_cur_parse_flag == TokenStrFlag.RawString){
                 // 增加中间段的空行
                 var tk = _NewToken4String("", 0, 0);

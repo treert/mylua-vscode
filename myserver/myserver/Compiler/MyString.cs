@@ -253,7 +253,7 @@ public class MyFile{
     }
 
     public MyLine GetLine(int index){
-        return m_lines.Count > index ? m_lines[index] : null;
+        return (index >= 0 && m_lines.Count > index) ? m_lines[index] : null;
     }
     
     public MyFile(string filepath){
@@ -265,7 +265,7 @@ public class MyFile{
         m_lines.EnsureCapacity(lines.Length);
         for (int i = 0; i < lines.Length; i++){
             var line = new MyLine(lines[i], i);
-            
+            line.m_file = this;
             m_lines.Add(line);
         }
     }
@@ -298,6 +298,10 @@ public class MyLine{
         _CalTabSize();
     }
 
+    public MyFile m_file = default;
+
+    public MyLine PreLine => m_file.GetLine(m_row_idx - 1);
+    public MyLine NextLine => m_file.GetLine(m_row_idx + 1);
     public TokenStrFlag m_parse_flag = TokenStrFlag.Normal;
     public int m_equal_sep_num = 0;
 
@@ -310,6 +314,7 @@ public class MyLine{
     public int TabSize => m_tab_size;
     public List<Token> Tokens => m_tokens;
 
+    // 获取 lua token, 会过滤掉 commnet
     public Token GetToken(int idx){
         if(m_tokens.Count > idx){
             return m_tokens[idx];
@@ -357,6 +362,7 @@ public class MyLine{
     }
 
     List<Token> m_tokens = new List<Token>();
+    
     string m_content = default;
     int m_tab_size = 0;
     int m_row_idx = 0;

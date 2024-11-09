@@ -15,12 +15,20 @@ public abstract class SyntaxTree
         err_tokens.Add(token);
     }
 
-    public void SetErrMsg(string msg){
-        err_msg = msg;
+    public void AddErrMsg(string msg){
+        if (err_msg == "")
+            err_msg = msg;
+        else
+            err_msg += "\n" + msg;
     }
 
     public void AddErrMsgToToken(Token token, string msg){
-        err_tk_map[token] = msg;
+        if (err_tk_map.ContainsKey(token)){
+            err_tk_map[token] += "\n" + msg;
+        }
+        else{
+            err_tk_map[token] = msg;
+        }
     }
 }
 
@@ -71,6 +79,16 @@ public class BreakStatement : SyntaxTree
 public class ContinueStatement : SyntaxTree
 {
 
+}
+
+public class InvalidStatement : SyntaxTree
+{
+
+}
+
+public class InvalidExp : ExpSyntaxTree
+{
+    
 }
 
 public class WhileStatement : SyntaxTree

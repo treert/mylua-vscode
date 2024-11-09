@@ -72,13 +72,14 @@ public class LuaParser {
     }
 
     // 往后读到一个 keyword 为止。中间遇到的全部当成错误
-    void GoToNextKeyword(SyntaxTree root_tree, int line_idx_limit)
+    void GoToNextKeyword(SyntaxTree root_tree)
     {
+        int line_idx_limit = LastToken.RowIdx;
         using(new MyParseLimitGuard(this, m_tab_size_limit, line_idx_limit)){
             for(;;){
                 var tok = LookAhead();
                 if (tok.IsKeyword()) return;
-                if (tok.IsEndOfLine) return;// 结束了
+                if (tok.IsNone) return;// 结束了
                 root_tree.AddErrToken(NextToken());
             }
         }
@@ -98,7 +99,7 @@ public class LuaParser {
         Token tok_wait_end = null;
         using(_NewLimitGurad(tok_if)){
             statement.exp = ParseExp();
-            GoToNextKeyword(statement, LastToken.RowIdx);
+            GoToNextKeyword(statement);
             // then
             if (CheckAndNext(Keyword.THEN)){
                 tok_wait_end = LastToken;
@@ -108,11 +109,10 @@ public class LuaParser {
                 statement.AddErrMsgToToken(tok_if, "<if> miss <then>");
                 goto the_end;
             }
-            GoToNextKeyword(statement, LastToken.RowIdx);
             while(CheckAndNext(Keyword.ELSEIF)){
                 var elseif_tk = LastToken;
                 var exp = ParseExp();
-                GoToNextKeyword(statement, LastToken.RowIdx);
+                GoToNextKeyword(statement);
                 if (CheckAndNext(Keyword.THEN)){
                     tok_wait_end = LastToken;
                     var block = ParseBlockLimitByLastToken();
@@ -128,7 +128,6 @@ public class LuaParser {
                 tok_wait_end = LastToken;
                 BlockTree block = ParseBlockLimitByLastToken();
             }
-            GoToNextKeyword(statement, LastToken.RowIdx);
             the_end:
             if (!CheckAndNext(Keyword.END)){
                 if (tok_wait_end is not null)
@@ -158,13 +157,14 @@ public class LuaParser {
         NextToken();// skip 'while'
         var statement = new WhileStatement();
         var tk_while = LastToken;
-        Token tok_wait_end = null;
         using (_NewLimitGurad(tk_while)){
-            var exp = ParseExp();
-            GoToNextKeyword(statement, LastToken.RowIdx);
+            statement.exp = ParseExp();
+            GoToNextKeyword(statement);
             if (CheckAndNext(Keyword.DO)){
-                tok_wait_end = LastToken;
                 statement.block = ParseBlockLimitByLastToken();
+                if (!CheckAndNext(Keyword.END)){
+                    statement.AddErrMsgToToken(tk_while, "miss <end>");
+                }
             }
             else{
                 CheckAndNext(Keyword.END);// 尽量吃掉一个吧。
@@ -177,69 +177,85 @@ public class LuaParser {
     SyntaxTree ParseForStatement()
     {
         NextToken();// skip 'for'
-
-        if(LookAhead().Match(TokenType.NAME)){
-            ThrowParseException($"expect 'id' after 'for'");
-        }
-        if (LookAhead2().Match('=')){
-            return ParseForNumStatement();
-        }
-        else
-        {
-            return ParseForInStatement();
+        var for_tk = LastToken;
+        using (_NewLimitGurad(for_tk)){
+            if(LookAhead().Match(TokenType.NAME)){
+                var statement = new InvalidStatement();
+                return statement;
+            }
+            if (LookAhead2().Match('=')){
+                return ParseForNumStatement();
+            }
+            else
+            {
+                return ParseForInStatement();
+            }
         }
     }
 
     ForNumStatement ParseForNumStatement()
     {
+        var for_tk = LastToken;
         var statement = new ForNumStatement();
         var name = NextToken();
         NextToken();// skip '='
 
         statement.name = name;
         statement.exp_init = ParseExp();
-        if(!LookAhead().Match(','))
-        {
-            ThrowParseException("expect ',' in for-num-statement");
-        }
-        NextToken();// skip ','
-        statement.exp_limit = ParseExp();
         if(LookAhead().Match(','))
         {
-            NextToken();
-            statement.exp_step = ParseExp();
+            statement.exp_limit = ParseExp();
+            if(LookAhead().Match(','))
+            {
+                NextToken();
+                statement.exp_step = ParseExp();
+            }
         }
-
-        CheckAndNext(Keyword.DO);
-        statement.block = ParseBlock();
-        CheckAndNext(Keyword.END);
+        else {
+            statement.exp_limit = new InvalidExp();
+            statement.exp_limit.AddErrMsg("expect ',' in for-num-statement");
+        }
+        GoToNextKeyword(statement);
+        if (CheckAndNext(Keyword.DO)){
+            statement.block = ParseBlockLimitByLastToken();
+            if (!CheckAndNext(Keyword.END)){
+                statement.AddErrMsgToToken(for_tk, "miss <end>");
+            }
+        }
+        else{
+            CheckAndNext(Keyword.END); // try eat one end
+            statement.AddErrMsgToToken(for_tk, "miss <end>");
+        }
         return statement;
     }
 
     ForInStatement ParseForInStatement()
     {
+        var for_tk = LastToken;
         var statement = new ForInStatement();
         statement.names = ParseNameList();
-        CheckAndNext(Keyword.IN);
-        statement.exp_list = ParseExpList();
-        CheckAndNext(Keyword.DO);
-        statement.block = ParseBlock();
-        CheckAndNext(Keyword.END);
+        if (ExpectAndNextKeyword(statement, Keyword.IN)){
+            statement.exp_list = ParseExpList();
+            GoToNextKeyword(statement);
+        }
+        // 即便没找到 in 也继续找 do
+        if (ExpectAndNextKeyword(statement, Keyword.DO)){
+            statement.block = ParseBlockLimitByLastToken();
+        }
+        ExpectAndNextKeyword(statement, Keyword.END);
         return statement;
     }
 
+    // 不会报错。但是如果返回的是空数组。外部应该当成是有错的。
     List<Token> ParseNameList()
     {
         var list = new List<Token>();
-        list.Add(NextToken());
-        while(LookAhead().Match(','))
-        {
-            NextToken();
-            if(LookAhead().Match(TokenType.NAME))
-            {
-                ThrowParseException("expect 'id' after ','");
-            }
+        if (LookAhead().Match(TokenType.NAME)){
             list.Add(NextToken());
+            while (LookAhead().Match(',') && LookAhead2().Match(TokenType.NAME)){
+                NextToken();
+                list.Add(NextToken());
+            }
         }
         return list;
     }
@@ -310,6 +326,18 @@ public class LuaParser {
     SyntaxTree ParseOtherStatement()
     {
         return null;
+    }
+
+    bool ExpectAndNextKeyword(SyntaxTree syntax, Keyword keyword){
+        GoToNextKeyword(syntax);
+        var ahead = LookAhead();
+        if (ahead.Match(keyword))
+        {
+            NextToken();
+            return true;
+        }
+        syntax.AddErrMsg($"miss <{keyword.ToString().ToLower()}>");
+        return false;
     }
 
     bool CheckAndNext(Keyword keyword)
@@ -403,20 +431,28 @@ public class LuaParser {
     }
 
     // 文件内部读取下一个Token. 会把读取指针往后移动一位。
+    // 会过滤掉 comment
     private Token _ReadNextToken(){
         if (m_cur_line is not null){
             var tok = m_cur_line.GetToken(m_next_tok_idx);
             m_next_tok_idx ++;
-            if (tok.IsEndOfLine){
+            if (tok.IsNone || tok.IsComment){
                 m_next_tok_idx = 1;// 必然要读一个token。所有一定是 1。
                 for (;;) {
                     m_cur_line = m_file.GetLine(m_cur_line.RowIdx + 1);
                     if (m_cur_line is null) break;
                     tok = m_cur_line.GetToken(0);
-                    if (tok.IsEndOfLine == false) break;
+                    if (tok.IsNone || tok.IsComment){
+                        continue;
+                    }
+                    else{
+                        return tok;
+                    }
                 }
             }
-            return tok;
+            else {
+                return tok;
+            }
         }
         return Token.EndOfLine;
     }
