@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -94,6 +95,12 @@ public class ContinueStatement : SyntaxTree
 
 }
 
+public class GotoStatement : SyntaxTree
+{
+    public Token label = Token.None;
+}
+
+
 public class InvalidStatement : SyntaxTree
 {
 
@@ -102,6 +109,12 @@ public class InvalidStatement : SyntaxTree
 public class InvalidExp : ExpSyntaxTree
 {
     
+}
+
+public class RepeatStatement: SyntaxTree
+{
+    public BlockTree block;
+    public ExpSyntaxTree exp;
 }
 
 public class WhileStatement : SyntaxTree

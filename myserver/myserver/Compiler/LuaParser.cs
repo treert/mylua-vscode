@@ -382,32 +382,73 @@ public class LuaParser {
 
     SyntaxTree ParseReturnStatement()
     {
-        return null;
+        NextToken();
+        var statement = new ReturnStatement();
+        if (IsMainExp()){
+            statement.exp_list = ParseExpList();
+        }
+        return statement;
     }
 
     SyntaxTree ParseBreakStatement()
     {
-        return null;
+        NextToken();
+        return new BreakStatement();
     }
 
     SyntaxTree ParseContinueStatement()
     {
-        return null;
+        NextToken();
+        return new ContinueStatement();
     }
 
     SyntaxTree ParseGotoStatement()
     {
-        return null;
+        NextToken();
+        var statement = new GotoStatement();
+        if (CheckAndNext(TokenType.NAME)){
+            statement.label = LastToken;
+        }
+        else{
+            statement.AddErrMsg("expect <Label> after <goto>");
+        }
+        return statement;
     }
 
     SyntaxTree ParseRepeatStatement()
     {
-        return null;
+        NextToken();
+        var statement = new RepeatStatement();
+        using var _ = _NewLimitGurad(LastToken);
+        statement.block = ParseBlockLimitByLastToken();
+        if(ExpectAndNextKeyword(statement, Keyword.UNTIL)){
+            statement.exp = ParseExp();
+        }
+        return statement;
     }
 
     SyntaxTree ParseOtherStatement()
     {
         return null;
+    }
+
+    bool IsMainExp() {
+        int token_type = LookAhead().type;
+        return
+            token_type == (int)Keyword.NIL ||
+            token_type == (int)Keyword.FALSE ||
+            token_type == (int)Keyword.TRUE ||
+            token_type == (int)TokenType.NUMBER ||
+            token_type == (int)TokenType.STRING ||
+            token_type == (int)TokenType.DOTS ||
+            token_type == (int)Keyword.FUNCTION ||
+            token_type == (int)TokenType.NAME ||
+            token_type == (int)'(' ||
+            token_type == (int)'{' ||
+            token_type == (int)'[' ||
+            token_type == (int)'-' ||
+            token_type == (int)'#' ||
+            token_type == (int)Keyword.NOT;
     }
 
     bool ExpectAndNextKeyword(SyntaxTree syntax, Keyword keyword){

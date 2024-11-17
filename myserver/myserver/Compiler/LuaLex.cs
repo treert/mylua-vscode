@@ -36,6 +36,7 @@ public enum Keyword
     NOT,
     OR,
     REPEAT,
+    UNTIL,
     RETURN,
     TRUE,
     THEN,
