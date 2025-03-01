@@ -128,6 +128,11 @@ public class DoStatement : SyntaxTree
     public BlockTree block;
 }
 
+public class LabelStatement : SyntaxTree
+{
+    public Token label;
+}
+
 public class IfStatement : SyntaxTree
 {
 

@@ -22,28 +22,36 @@ public class LuaParser {
             switch(tk_ahead.type){
                 case (int)';':
                     NextToken();break;
-                case (int)Keyword.IF:
-                    statement = ParseIfStatement(); break;
-                case (int)Keyword.DO:
-                    statement = ParseDoStatement(); break;
-                case (int)Keyword.WHILE:
-                    statement = ParseWhileStatement(); break;
-                case (int)Keyword.FOR:
-                    statement = ParseForStatement(); break;
-                case (int)Keyword.FUNCTION:
-                    statement = ParseFunctionStatement(); break;
-                case (int)Keyword.LOCAL:
-                    statement = ParseLocalStatement(); break;
-                case (int)Keyword.RETURN:
-                    statement = ParseReturnStatement(); break;
+                case (int)TokenType.DBCOLON:
+                    statement = ParseLabelStatement(); break;
                 case (int)Keyword.BREAK:
                     statement = ParseBreakStatement(); break;
                 case (int)Keyword.CONTINUE:
                     statement = ParseContinueStatement(); break;
                 case (int)Keyword.GOTO:
                     statement = ParseGotoStatement(); break;
+
+                case (int)Keyword.DO:
+                    statement = ParseDoStatement(); break;
+
+                case (int)Keyword.WHILE:
+                    statement = ParseWhileStatement(); break;
                 case (int)Keyword.REPEAT:
                     statement = ParseRepeatStatement(); break;
+
+                case (int)Keyword.IF:
+                    statement = ParseIfStatement(); break;
+
+                case (int)Keyword.FOR:
+                    statement = ParseForStatement(); break;
+
+                case (int)Keyword.FUNCTION:
+                    statement = ParseFunctionStatement(); break;
+                case (int)Keyword.LOCAL:
+                    statement = ParseLocalStatement(); break;
+
+                case (int)Keyword.RETURN:
+                    statement = ParseReturnStatement(); break;
                 default:
                     statement = ParseOtherStatement();
                     break;
@@ -72,7 +80,10 @@ public class LuaParser {
         return ParseBlock(token.TabSize + 1);
     }
 
-    // 往后读到一个 keyword 为止。中间遇到的全部当成错误
+    /// <summary>
+    /// 往后读到一个 keyword 为止。中间遇到的全部当成错误
+    /// </summary>
+    /// <param name="root_tree"></param>
     void GoToNextKeyword(SyntaxTree root_tree)
     {
         int line_idx_limit = LastToken.RowIdx;
@@ -86,7 +97,11 @@ public class LuaParser {
         }
     }
 
-    // 往后读到一个 keyword () {} [] 为止。中间遇到的全部当成错误
+    /// <summary>
+    /// 往后读到一个 keyword () {} [] 为止。中间遇到的全部当成错误
+    /// </summary>
+    /// <param name="tree"></param>
+    /// <param name="ch"></param>
     void GoToNextKeywordOrBracket(SyntaxTree tree, char ch = '\0'){
         int line_idx_limit = LastToken.RowIdx;
         using(new MyParseLimitGuard(this, m_tab_size_limit, line_idx_limit)){
@@ -107,6 +122,22 @@ public class LuaParser {
     MyParseLimitGuard _NewLimitGurad(Token token, int plus = 0)
     {
         return new MyParseLimitGuard(this, token.TabSize + plus);
+    }
+
+    private SyntaxTree ParseLabelStatement(){
+        var tok = NextToken();// skip ::
+        if (LookAhead().Match(TokenType.NAME)){
+            var statement = new LabelStatement();
+            statement.label = NextToken();
+            if (CheckAndNext(TokenType.DBCOLON) == false){
+                statement.AddErrMsgToToken(tok, "miss corresponding ::");
+            }
+            return statement;
+        }
+        else {
+            var err = new InvalidStatement();
+            return err;
+        }
     }
 
     private IfStatement ParseIfStatement()
@@ -198,15 +229,10 @@ public class LuaParser {
         NextToken();// skip 'for'
         var for_tk = LastToken;
         using (_NewLimitGurad(for_tk)){
-            if(LookAhead().Match(TokenType.NAME)){
-                var statement = new InvalidStatement();
-                return statement;
-            }
-            if (LookAhead2().Match('=')){
+            if (LookAhead().Match(TokenType.NAME) && LookAhead2().Match('=')){
                 return ParseForNumStatement();
             }
-            else
-            {
+            else{
                 return ParseForInStatement();
             }
         }
@@ -216,7 +242,7 @@ public class LuaParser {
     {
         var for_tk = LastToken;
         var statement = new ForNumStatement();
-        var name = NextToken();
+        var name = NextToken();// read Name
         NextToken();// skip '='
 
         statement.name = name;
@@ -410,7 +436,7 @@ public class LuaParser {
             statement.label = LastToken;
         }
         else{
-            statement.AddErrMsg("expect <Label> after <goto>");
+            statement.AddErrMsgToToken(LastToken, "expect <Label> after <goto>");
         }
         return statement;
     }
@@ -451,6 +477,12 @@ public class LuaParser {
             token_type == (int)Keyword.NOT;
     }
 
+    /// <summary>
+    /// 除了 keyword 全部过滤掉，读到 keyword 为之
+    /// </summary>
+    /// <param name="syntax"></param>
+    /// <param name="keyword"></param>
+    /// <returns></returns>
     bool ExpectAndNextKeyword(SyntaxTree syntax, Keyword keyword){
         GoToNextKeyword(syntax);
         if (!CheckAndNext(keyword))
@@ -458,12 +490,20 @@ public class LuaParser {
         return false;
     }
 
+    /// <summary>
+    /// 除了 keyword () {} [] 全部过滤掉，读到 ch 为之
+    /// </summary>
+    /// <param name="syntax"></param>
+    /// <param name="ch"></param>
+    /// <returns></returns>
     bool ExpectAndNext(SyntaxTree syntax, char ch){
         // 除了 keyword () {} [] 全部过滤掉
         GoToNextKeywordOrBracket(syntax, ch);
-        if (!CheckAndNext(ch))
+        if (!CheckAndNext(ch)){
             syntax.AddErrMsg($"miss '{ch}'");
-        return false;
+            return false;
+        }
+        return true;
     }
 
     bool CheckAndNext(Keyword keyword)
