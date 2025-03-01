@@ -24,33 +24,33 @@ public class LuaParser {
                     NextToken();break;
                 case (int)TokenType.DBCOLON:
                     statement = ParseLabelStatement(); break;
-                case (int)Keyword.BREAK:
+                case (int)TokenType.BREAK:
                     statement = ParseBreakStatement(); break;
-                case (int)Keyword.CONTINUE:
+                case (int)TokenType.CONTINUE:
                     statement = ParseContinueStatement(); break;
-                case (int)Keyword.GOTO:
+                case (int)TokenType.GOTO:
                     statement = ParseGotoStatement(); break;
 
-                case (int)Keyword.DO:
+                case (int)TokenType.DO:
                     statement = ParseDoStatement(); break;
 
-                case (int)Keyword.WHILE:
+                case (int)TokenType.WHILE:
                     statement = ParseWhileStatement(); break;
-                case (int)Keyword.REPEAT:
+                case (int)TokenType.REPEAT:
                     statement = ParseRepeatStatement(); break;
 
-                case (int)Keyword.IF:
+                case (int)TokenType.IF:
                     statement = ParseIfStatement(); break;
 
-                case (int)Keyword.FOR:
+                case (int)TokenType.FOR:
                     statement = ParseForStatement(); break;
 
-                case (int)Keyword.FUNCTION:
+                case (int)TokenType.FUNCTION:
                     statement = ParseFunctionStatement(); break;
-                case (int)Keyword.LOCAL:
+                case (int)TokenType.LOCAL:
                     statement = ParseLocalStatement(); break;
 
-                case (int)Keyword.RETURN:
+                case (int)TokenType.RETURN:
                     statement = ParseReturnStatement(); break;
                 default:
                     statement = ParseOtherStatement();
@@ -143,7 +143,7 @@ public class LuaParser {
     private IfStatement ParseIfStatement()
     {
         var tok_if = NextToken();// if
-        Debug.Assert(tok_if.Match(Keyword.IF));
+        Debug.Assert(tok_if.Match(TokenType.IF));
 
         var statement = new IfStatement();
         Token tok_wait_end = null;
@@ -151,7 +151,7 @@ public class LuaParser {
             statement.exp = ParseExp();
             GoToNextKeyword(statement);
             // then
-            if (CheckAndNext(Keyword.THEN)){
+            if (CheckAndNext(TokenType.THEN)){
                 tok_wait_end = LastToken;
                 statement.then_branch = ParseBlockLimitByLastToken();
             }
@@ -159,11 +159,11 @@ public class LuaParser {
                 statement.AddErrMsgToToken(tok_if, "<if> miss <then>");
                 goto the_end;
             }
-            while(CheckAndNext(Keyword.ELSEIF)){
+            while(CheckAndNext(TokenType.ELSEIF)){
                 var elseif_tk = LastToken;
                 var exp = ParseExp();
                 GoToNextKeyword(statement);
-                if (CheckAndNext(Keyword.THEN)){
+                if (CheckAndNext(TokenType.THEN)){
                     tok_wait_end = LastToken;
                     var block = ParseBlockLimitByLastToken();
                     statement.elseif_list.Add((exp, block));
@@ -174,12 +174,12 @@ public class LuaParser {
                     goto the_end;
                 }
             }
-            if (CheckAndNext(Keyword.ELSE)){
+            if (CheckAndNext(TokenType.ELSE)){
                 tok_wait_end = LastToken;
                 BlockTree block = ParseBlockLimitByLastToken();
             }
             the_end:
-            if (!CheckAndNext(Keyword.END)){
+            if (!CheckAndNext(TokenType.END)){
                 if (tok_wait_end is not null)
                     statement.AddErrMsgToToken(tok_wait_end, "miss <end>");
             }
@@ -195,7 +195,7 @@ public class LuaParser {
         using(_NewLimitGurad(tk_do))
         {
             statement.block = ParseBlockLimitByLastToken();
-            if (!CheckAndNext(Keyword.END)){
+            if (!CheckAndNext(TokenType.END)){
                 statement.AddErrMsgToToken(tk_do, "miss <end>");
             }
             return statement;
@@ -210,14 +210,14 @@ public class LuaParser {
         using (_NewLimitGurad(tk_while)){
             statement.exp = ParseExp();
             GoToNextKeyword(statement);
-            if (CheckAndNext(Keyword.DO)){
+            if (CheckAndNext(TokenType.DO)){
                 statement.block = ParseBlockLimitByLastToken();
-                if (!CheckAndNext(Keyword.END)){
+                if (!CheckAndNext(TokenType.END)){
                     statement.AddErrMsgToToken(tk_while, "miss <end>");
                 }
             }
             else{
-                CheckAndNext(Keyword.END);// 尽量吃掉一个吧。
+                CheckAndNext(TokenType.END);// 尽量吃掉一个吧。
                 statement.AddErrMsgToToken(tk_while, "miss <do>");
             }
         }
@@ -261,14 +261,14 @@ public class LuaParser {
             statement.exp_limit.AddErrMsg("expect ',' in for-num-statement");
         }
         GoToNextKeyword(statement);
-        if (CheckAndNext(Keyword.DO)){
+        if (CheckAndNext(TokenType.DO)){
             statement.block = ParseBlockLimitByLastToken();
-            if (!CheckAndNext(Keyword.END)){
+            if (!CheckAndNext(TokenType.END)){
                 statement.AddErrMsgToToken(for_tk, "miss <end>");
             }
         }
         else{
-            CheckAndNext(Keyword.END); // try eat one end
+            CheckAndNext(TokenType.END); // try eat one end
             statement.AddErrMsgToToken(for_tk, "miss <end>");
         }
         return statement;
@@ -278,15 +278,15 @@ public class LuaParser {
     {
         var statement = new ForInStatement();
         statement.names = ParseNameList();
-        if (ExpectAndNextKeyword(statement, Keyword.IN)){
+        if (ExpectAndNextKeyword(statement, TokenType.IN)){
             statement.exp_list = ParseExpList();
             GoToNextKeyword(statement);
         }
         // 即便没找到 in 也继续找 do
-        if (ExpectAndNextKeyword(statement, Keyword.DO)){
+        if (ExpectAndNextKeyword(statement, TokenType.DO)){
             statement.block = ParseBlockLimitByLastToken();
         }
-        ExpectAndNextKeyword(statement, Keyword.END);
+        ExpectAndNextKeyword(statement, TokenType.END);
         return statement;
     }
 
@@ -335,7 +335,7 @@ public class LuaParser {
             statment.AddErrMsg("miss '(' to start params");
         }
         statment.block = ParseBlock(fn_tk);
-        ExpectAndNextKeyword(statment, Keyword.END);
+        ExpectAndNextKeyword(statment, TokenType.END);
         return statment;
     }
 
@@ -370,7 +370,7 @@ public class LuaParser {
     {
         var loc_tk = NextToken();
         using var _ = _NewLimitGurad(loc_tk);
-        if (LookAhead().Match(Keyword.FUNCTION)){
+        if (LookAhead().Match(TokenType.FUNCTION)){
             var fn_tk = NextToken();
             var statement = new LocalFunctionStatement();
             if (LookAhead().Match(TokenType.NAME)){
@@ -447,7 +447,7 @@ public class LuaParser {
         var statement = new RepeatStatement();
         using var _ = _NewLimitGurad(LastToken);
         statement.block = ParseBlockLimitByLastToken();
-        if(ExpectAndNextKeyword(statement, Keyword.UNTIL)){
+        if(ExpectAndNextKeyword(statement, TokenType.UNTIL)){
             statement.exp = ParseExp();
         }
         return statement;
@@ -461,20 +461,20 @@ public class LuaParser {
     bool IsMainExp() {
         int token_type = LookAhead().type;
         return
-            token_type == (int)Keyword.NIL ||
-            token_type == (int)Keyword.FALSE ||
-            token_type == (int)Keyword.TRUE ||
+            token_type == (int)TokenType.NIL ||
+            token_type == (int)TokenType.FALSE ||
+            token_type == (int)TokenType.TRUE ||
             token_type == (int)TokenType.NUMBER ||
             token_type == (int)TokenType.STRING ||
             token_type == (int)TokenType.DOTS ||
-            token_type == (int)Keyword.FUNCTION ||
+            token_type == (int)TokenType.FUNCTION ||
             token_type == (int)TokenType.NAME ||
             token_type == (int)'(' ||
             token_type == (int)'{' ||
             token_type == (int)'[' ||
             token_type == (int)'-' ||
             token_type == (int)'#' ||
-            token_type == (int)Keyword.NOT;
+            token_type == (int)TokenType.NOT;
     }
 
     /// <summary>
@@ -483,7 +483,7 @@ public class LuaParser {
     /// <param name="syntax"></param>
     /// <param name="keyword"></param>
     /// <returns></returns>
-    bool ExpectAndNextKeyword(SyntaxTree syntax, Keyword keyword){
+    bool ExpectAndNextKeyword(SyntaxTree syntax, TokenType keyword){
         GoToNextKeyword(syntax);
         if (!CheckAndNext(keyword))
             syntax.AddErrMsg($"miss <{keyword.ToString().ToLower()}>");
@@ -504,17 +504,6 @@ public class LuaParser {
             return false;
         }
         return true;
-    }
-
-    bool CheckAndNext(Keyword keyword)
-    {
-        var ahead = LookAhead();
-        if (ahead.Match(keyword))
-        {
-            NextToken();
-            return true;
-        }
-        return false;
     }
 
     bool CheckAndNext(char ch){
@@ -540,6 +529,15 @@ public class LuaParser {
     ExpSyntaxTree ParseExp(int left_priority = 0)
     {
         return null;
+    }
+
+    ExpSyntaxTree ParseMainExp()
+    {
+        ExpSyntaxTree exp = null;
+        // switch (LookAhead().type){
+        //     case (int)TokenType.NIL:
+        // }
+        return exp;
     }
 
     ExpressionList ParseExpList()

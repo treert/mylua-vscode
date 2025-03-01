@@ -16,33 +16,6 @@ vscode multilineTokenSupport is false.
 所以也不支持跨行的token。对于触发换行的 string 和 comment, 会拆分成多段。
 */
 
-public enum Keyword
-{
-    AND = TokenType.NAME + 1,// 搞不懂了，一方面不支持enum隐式转换成int，一方面又允许这种语法
-    BREAK,
-    CONTINUE,// mylua 特殊支持
-    DO,
-    ELSE,
-    ELSEIF,
-    END,
-    FALSE,
-    FOR,
-    FUNCTION,
-    GOTO,
-    IF,
-    IN,
-    LOCAL,
-    NIL,
-    NOT,
-    OR,
-    REPEAT,
-    UNTIL,
-    RETURN,
-    TRUE,
-    THEN,
-    WHILE,
-}
-
 public enum TokenType
 {
     // 空token，用于标记：行尾，文件尾，无效token
@@ -69,7 +42,36 @@ public enum TokenType
     Illegal,// 各类非法输入。
 
     // Name，Must place at last
-    NAME = 0xFFFF,
+    NAME,
+
+    // ----------------------             --------------------
+
+    /// <summary>
+    /// 第一个关键字类型。之后的都是关键字
+    /// </summary>
+    AND,
+    BREAK,
+    CONTINUE,// mylua 特殊支持
+    DO,
+    ELSE,
+    ELSEIF,
+    END,
+    FALSE,
+    FOR,
+    FUNCTION,
+    GOTO,
+    IF,
+    IN,
+    LOCAL,
+    NIL,
+    NOT,
+    OR,
+    REPEAT,
+    UNTIL,
+    RETURN,
+    TRUE,
+    THEN,
+    WHILE,
 }
 
 /*
@@ -111,15 +113,17 @@ public class Token
 {
     // 空token，用作标记
     public static readonly Token None = new Token(TokenType.None);
-    static Dictionary<string, Keyword> keywords = [];
+    static Dictionary<string, TokenType> keywords = [];
     static Token()
     {
-        var arr = Enum.GetValues(typeof(Keyword));
+        var arr = Enum.GetValues(typeof(TokenType));
         for (int i = 0; i < arr.Length; i++)
         {
             var obj = arr.GetValue(i)!;
-            Keyword key = (Keyword)obj;
-            keywords.Add(key.ToString().ToLower(), key);
+            TokenType key = (TokenType)obj;
+            if (key >= TokenType.AND){
+                keywords.Add(key.ToString().ToLower(), key);
+            }
         }
     }
 
@@ -264,14 +268,9 @@ public class Token
         return type == (int)type_;
     }
 
-    public bool Match(Keyword key)
-    {
-        return type == (int)key;
-    }
-
     public bool IsKeyword()
     {
-        return type >= (int) Keyword.AND;
+        return type >= (int) TokenType.AND;
     }
 
     public void SetRange(int start_idx, int end_idx)
@@ -307,7 +306,7 @@ public class Token
         }
         else
         {
-            if(keywords.TryGetValue(str_, out Keyword key))
+            if(keywords.TryGetValue(str_, out TokenType key))
             {
                 type = (int)key;
             }
@@ -403,7 +402,7 @@ public class LuaLex
             line.AddToken(cur_tok);
             last_tok = cur_tok;
             if (cur_tok.IsKeyword()){
-                if (pre_tok.Match('.') || pre_tok.Match(TokenType.DBCOLON) || pre_tok.Match(Keyword.GOTO)){
+                if (pre_tok.Match('.') || pre_tok.Match(TokenType.DBCOLON) || pre_tok.Match(TokenType.GOTO)){
                     cur_tok.MarkToName();
                 }
             }
