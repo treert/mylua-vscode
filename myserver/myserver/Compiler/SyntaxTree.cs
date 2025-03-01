@@ -67,7 +67,7 @@ public class LocalFunctionStatement : SyntaxTree
     public FunctionBody function_body;
 }
 
-public class FunctionBody : SyntaxTree
+public class FunctionBody : ExpSyntaxTree
 {
     public ParamList param_list;
     public bool has_self = false;// 是否有语法糖增加的self
@@ -176,17 +176,22 @@ public class Terminator : ExpSyntaxTree
     public Token token;
 }
 
-public class BinaryExpression : SyntaxTree
+public class BinaryExpression : ExpSyntaxTree
 {
     public ExpSyntaxTree left;
     public ExpSyntaxTree right;
     public Token op;
 }
 
-public class UnaryExpression : SyntaxTree
+public class UnaryExpression : ExpSyntaxTree
 {
     public ExpSyntaxTree exp;
     public Token op;
+}
+
+public class ArrayDefine : ExpSyntaxTree
+{
+    public List<ExpSyntaxTree> fields = [];
 }
 
 public class TableDefine : ExpSyntaxTree

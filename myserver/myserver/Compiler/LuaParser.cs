@@ -458,25 +458,6 @@ public class LuaParser {
         return null;
     }
 
-    bool IsMainExp() {
-        int token_type = LookAhead().type;
-        return
-            token_type == (int)TokenType.NIL ||
-            token_type == (int)TokenType.FALSE ||
-            token_type == (int)TokenType.TRUE ||
-            token_type == (int)TokenType.NUMBER ||
-            token_type == (int)TokenType.STRING ||
-            token_type == (int)TokenType.DOTS ||
-            token_type == (int)TokenType.FUNCTION ||
-            token_type == (int)TokenType.NAME ||
-            token_type == (int)'(' ||
-            token_type == (int)'{' ||
-            token_type == (int)'[' ||
-            token_type == (int)'-' ||
-            token_type == (int)'#' ||
-            token_type == (int)TokenType.NOT;
-    }
-
     /// <summary>
     /// 除了 keyword 全部过滤掉，读到 keyword 为之
     /// </summary>
@@ -526,6 +507,42 @@ public class LuaParser {
         return false;
     }
 
+    FunctionBody ParseFunctionDef()
+    {
+        return null;
+    }
+
+    TableDefine ParseTableConstructor()
+    {
+        return null;
+    }
+
+    ArrayDefine ParseArrayConstructor()
+    {
+        return null;
+    }
+
+    bool IsMainExp() {
+        int token_type = LookAhead().type;
+        return
+            token_type == (int)TokenType.NIL ||
+            token_type == (int)TokenType.FALSE ||
+            token_type == (int)TokenType.TRUE ||
+            token_type == (int)TokenType.NUMBER ||
+            token_type == (int)TokenType.STRING ||
+            token_type == (int)TokenType.DOTS ||
+            token_type == (int)TokenType.FUNCTION ||
+            token_type == (int)TokenType.NAME ||
+            token_type == (int)'(' ||
+            token_type == (int)'{' ||
+            token_type == (int)'[' ||
+            token_type == (int)'-' ||
+            token_type == (int)'~' ||
+            token_type == (int)'#' ||
+            token_type == (int)'$' ||
+            token_type == (int)TokenType.NOT;
+    }
+
     ExpSyntaxTree ParseExp(int left_priority = 0)
     {
         return null;
@@ -533,10 +550,51 @@ public class LuaParser {
 
     ExpSyntaxTree ParseMainExp()
     {
-        ExpSyntaxTree exp = null;
-        // switch (LookAhead().type){
-        //     case (int)TokenType.NIL:
-        // }
+        ExpSyntaxTree exp;
+        switch(LookAhead().type)
+        {
+            case (int)TokenType.NIL:
+            case (int)TokenType.FALSE:
+            case (int)TokenType.TRUE:
+            case (int)TokenType.NUMBER:
+            case (int)TokenType.STRING:
+            case (int)TokenType.DOTS:
+                exp = new Terminator{token = NextToken()};
+                break;
+            case (int)TokenType.FUNCTION:
+                exp = ParseFunctionDef();
+                break;
+            case (int)TokenType.NAME:
+            case (int)'(':
+                {
+                    var tok = NextToken();// skip (
+                    exp = ParseExp();
+                    if (CheckAndNext(')') == false){
+                        exp.AddErrMsgToToken(tok, "miss corresponding <)>");
+                    }
+                }
+                break;
+            case (int)'{':
+                exp = ParseTableConstructor();
+                break;
+            case (int)'[':
+                exp = ParseArrayConstructor();
+                break;
+            // unop exp priority is 90 less then ^
+            case (int)'-':
+            case (int)'~':
+            case (int)'#':
+            case (int)TokenType.NOT:
+                var unexp = new UnaryExpression();
+                unexp.op = NextToken();
+                unexp.exp = ParseExp(90);
+                exp = unexp;
+                break;
+            default:
+                NextToken();
+                exp = new InvalidExp();
+                break;
+        }
         return exp;
     }
 
