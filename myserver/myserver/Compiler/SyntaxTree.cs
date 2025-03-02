@@ -32,7 +32,7 @@ public abstract class SyntaxTree
         }
     }
 
-    public bool HasDirectErr => err_msg != "" && err_tk_map.Count == 0 && err_tokens.Count == 0;
+    public virtual bool HasDirectErr => err_msg != "" && err_tk_map.Count == 0 && err_tokens.Count == 0;
 }
 
 public abstract class ExpSyntaxTree : SyntaxTree
@@ -110,7 +110,7 @@ public class InvalidStatement : SyntaxTree
 
 public class InvalidExp : ExpSyntaxTree
 {
-    
+    public override bool HasDirectErr => true;
 }
 
 public class RepeatStatement: SyntaxTree
@@ -176,6 +176,10 @@ public class AssignStatement : SyntaxTree
 public class Terminator : ExpSyntaxTree
 {
     public Token token;
+    /// <summary>
+    /// token is TokenType.NAME, but use as str
+    /// </summary>
+    public bool NameUsedAsStr = false;
 }
 
 public class BinaryExpression : ExpSyntaxTree
@@ -203,6 +207,10 @@ public class TableDefine : ExpSyntaxTree
 
 public class TableField : ExpSyntaxTree
 {
+    /// <summary>
+    /// 数组的索引。lua 里有效的索引 > 0
+    /// </summary>
+    public int ArrayIdx = 0;
     public ExpSyntaxTree index = null;
     public ExpSyntaxTree value;
 }

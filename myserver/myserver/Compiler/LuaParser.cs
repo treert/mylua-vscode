@@ -512,9 +512,74 @@ public class LuaParser {
         return null;
     }
 
+    TableField ParseTableIndexField()
+    {
+        var tok = NextToken();// skip [
+        var field = new TableField();
+        field.index = ParseExp();
+        if (CheckAndNext(']') == false){
+            field.AddErrMsgToToken(tok, "miss corresponding ']'");
+            // 虽然有错误。但是继续解析下去
+        }
+        if (CheckAndNext('=') == false){
+            field.AddErrMsg("expect '=' <exp>");
+            return field;// 没必要继续了
+        }
+        field.value = ParseExp();
+        return field;
+    }
+    TableField ParseTableNameField()
+    {
+        Debug.Assert(LookAhead().Match(TokenType.NAME) && LookAhead().Match('='));
+        var field = new TableField();
+        field.index = new Terminator{token = NextToken(), NameUsedAsStr = true};
+        NextToken();// skip '='
+        field.value = ParseExp();
+        return field;
+    }
+    TableField ParseTableArrayField()
+    {
+        var field = new TableField();
+        field.index = null;// default is null
+        field.value = ParseExp();
+        return field;
+    }
+
     TableDefine ParseTableConstructor()
     {
-        return null;
+        var start_tok = NextToken();// skip {
+        var table = new TableDefine();
+        // 考虑缩进
+        using(_NewLimitGurad(start_tok, 0)){
+            using(_NewLimitGurad(start_tok, 1)){
+                TableField last_field = null;
+                int array_idx = 0;
+                while(LookAhead().Match('}')){
+                    if (LookAhead().Match('[')){
+                        last_field = ParseTableIndexField();
+                    }
+                    else if (LookAhead().Match(TokenType.NAME) && LookAhead2().Match('=')){
+                        last_field = ParseTableNameField();
+                    }
+                    else{
+                        last_field = ParseTableArrayField();
+                        last_field.ArrayIdx = ++array_idx;
+                    }
+
+                    table.fields.Add(last_field);
+
+                    if (LookAhead().Match(',', ';')){
+                        NextToken();
+                        continue;
+                    }
+                    break;// 可以直接退出了
+                }
+            }
+            if (ExpectAndNext(table, '}') == false){
+                table.AddErrMsgToToken(start_tok, "miss corresponding '}'");
+            }
+        }
+        return table;
     }
 
     ArrayDefine ParseArrayConstructor()
@@ -610,7 +675,7 @@ public class LuaParser {
             var tok = NextToken();// skip (
             exp = ParseExp();
             if (CheckAndNext(')') == false){
-                exp.AddErrMsgToToken(tok, "miss corresponding <)>");
+                exp.AddErrMsgToToken(tok, "miss corresponding ')'");
             }
         }
         else {
