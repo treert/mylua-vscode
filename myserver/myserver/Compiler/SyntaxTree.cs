@@ -31,6 +31,8 @@ public abstract class SyntaxTree
             err_tk_map[token] = msg;
         }
     }
+
+    public bool HasDirectErr => err_msg != "" && err_tk_map.Count == 0 && err_tokens.Count == 0;
 }
 
 public abstract class ExpSyntaxTree : SyntaxTree
@@ -207,6 +209,7 @@ public class TableField : ExpSyntaxTree
 
 public class TableAccess : ExpSyntaxTree
 {
+    public bool has_q;
     public ExpSyntaxTree table;
     public ExpSyntaxTree index;
 }

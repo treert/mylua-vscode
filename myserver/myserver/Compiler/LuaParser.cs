@@ -548,6 +548,122 @@ public class LuaParser {
         return null;
     }
 
+    TableAccess ParseTableAccessor(ExpSyntaxTree table)
+    {
+        NextToken();// skip '[' or '.'
+        Debug.Assert(LastToken.Match('[', '.'));
+
+        var index_access = new TableAccess();
+        index_access.table = table;
+        if(LastToken.Match('['))
+        {
+            var tok = LastToken;
+            index_access.index = ParseExp();
+            if (CheckAndNext(']') == false){
+                index_access.AddErrMsgToToken(tok, "miss match ']'");
+            }
+        }
+        else
+        {
+            if (CheckAndNext(TokenType.NAME)){
+                index_access.index = new Terminator{token = LastToken};
+            }
+            else{
+                index_access.AddErrMsgToToken(LastToken, "expect 'id' after '.'");
+            }
+        }
+        return index_access;
+    }
+
+    FuncCall ParseFunctionCall(ExpSyntaxTree caller)
+    {
+        Debug.Assert(IsArgsCanStart());
+        var func_call = new FuncCall();
+        func_call.caller = caller;
+        func_call.args = ParseArgs();
+        return func_call;
+    }
+
+    bool IsArgsCanStart(){
+        var ahead = LookAhead();
+        return ahead.Match('$','(', '{') && ahead.Match(TokenType.STRING);
+    }
+
+    ArgsList ParseArgs()
+    {
+        return null;
+    }
+
+    /// <summary>
+    /// prefixexp ::= table_index | functioncall | '(' exp ')'
+    /// </summary>
+    /// <returns></returns>
+    ExpSyntaxTree ParsePrefixExp()
+    {
+        ExpSyntaxTree exp = null;
+        if (LookAhead().Match(TokenType.NAME))
+        {
+            exp = new Terminator{token = NextToken()};
+        }
+        else if (LookAhead().Match('('))
+        {
+            var tok = NextToken();// skip (
+            exp = ParseExp();
+            if (CheckAndNext(')') == false){
+                exp.AddErrMsgToToken(tok, "miss corresponding <)>");
+            }
+        }
+        else {
+            // 有错误。
+            exp = new InvalidExp();
+            return exp;// 直接退出吧
+        }
+
+        // table index or func call
+        while(exp.HasDirectErr == false)
+        {
+            bool has_q = CheckAndNext('?');
+            if (LookAhead().Match('[', '.')){
+                var table_access = ParseTableAccessor(exp);
+                table_access.has_q = has_q;
+                exp = table_access;
+            }
+            else if(LookAhead().Match(':'))
+            {
+                NextToken();// skip :
+                var table_access = new TableAccess();
+                table_access.table = exp;
+                exp = table_access;
+                if (LookAhead().Match(TokenType.NAME))
+                {
+                    table_access.index = new Terminator{token = NextToken()};
+                    // 后面应该就是函数参数了
+                    if (IsArgsCanStart()){
+                        exp = ParseFunctionCall(exp);
+                    }
+                }
+                else{
+                    table_access.AddErrMsgToToken(LastToken, "expect <Name> after ':'");
+                    break;// 有错误，退出
+                }
+            }
+            else if (IsArgsCanStart())
+            {
+                exp = ParseFunctionCall(exp);
+            }
+            else
+            {
+                break;
+            }
+        }
+        return exp;
+    }
+
+    ExpSyntaxTree ParseDollarExpr()
+    {
+        return null;
+    }
+
     ExpSyntaxTree ParseMainExp()
     {
         ExpSyntaxTree exp;
@@ -564,15 +680,12 @@ public class LuaParser {
             case (int)TokenType.FUNCTION:
                 exp = ParseFunctionDef();
                 break;
+            case '$':
+                exp = ParseDollarExpr();
+                break;
             case (int)TokenType.NAME:
             case (int)'(':
-                {
-                    var tok = NextToken();// skip (
-                    exp = ParseExp();
-                    if (CheckAndNext(')') == false){
-                        exp.AddErrMsgToToken(tok, "miss corresponding <)>");
-                    }
-                }
+                exp = ParsePrefixExp();
                 break;
             case (int)'{':
                 exp = ParseTableConstructor();

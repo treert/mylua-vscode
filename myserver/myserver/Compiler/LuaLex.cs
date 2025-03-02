@@ -36,7 +36,7 @@ public enum TokenType
     DBCOLON, // ::
 
     NUMBER,// int64 or double
-    STRING,// string 可以支持多行的
+    STRING,// string 由于是按行解析。不会出现多行
 
     Commnet,// 注释
     Illegal,// 各类非法输入。
