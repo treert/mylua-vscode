@@ -33,7 +33,10 @@ public enum TokenType
 
     QQUESTION,// ??
 
-    DBCOLON, // ::
+    /// <summary>
+    /// ::
+    /// </summary>
+    DBCOLON,
 
     NUMBER,// int64 or double
     STRING,// string 由于是按行解析。不会出现多行
@@ -103,7 +106,10 @@ public enum TokenStrFlag
     Dollar              = 1<<6,// 纯标记
     RawString           = 1<<7,
     RawComment          = 1<<8,
-    ZipMode             = 1<<9,// for \z, 同时也标记 sub_tok
+    /// <summary>
+    /// for \z, 同时也标记 sub_tok
+    /// </summary>
+    ZipMode             = 1<<9,
     DollarDoubleQuote   = Dollar | DoubleQuote,
     DollarSingleQuote   = Dollar | SingleQuote,
     OnlyStrMask = SingleQuote | DoubleQuote | Dollar | RawString | RawComment | ZipMode,// 用于获取 str flag
@@ -207,6 +213,9 @@ public class Token
     public bool TestStrFlag(TokenStrFlag flag){
         return (m_str_flag & flag) != 0;
     }
+    /// <summary>
+    /// [==[ str ]==] 里的等于号数量
+    /// </summary>
     public int m_equal_sep_num = 0;
 
     public bool IsStarted {
@@ -366,7 +375,13 @@ public class LuaLex
         m_dollar_open_cnt = 0;
     }
 
-    // 返回是否触发解析。如果什么都没变 没必要解析
+    /// <summary>
+    /// 返回是否触发解析。如果什么都没变 没必要解析。
+    /// </summary>
+    /// <param name="line"></param>
+    /// <param name="pre_line"></param>
+    /// <param name="only_if_flag_changed"></param>
+    /// <returns></returns>
     public bool ParseOneLine(MyLine line, MyLine pre_line = null, bool only_if_flag_changed = false){
         m_dollar_open_cnt = 0;
         m_equal_sep_num = 0;
@@ -382,6 +397,7 @@ public class LuaLex
         }
 
         if (only_if_flag_changed){
+            // 单纯是性能优化
             if (m_equal_sep_num == line.m_equal_sep_num && m_cur_parse_flag == line.m_parse_flag){
                 return false;// do nothing
             }
@@ -407,7 +423,7 @@ public class LuaLex
                 }
             }
             else if(cur_tok.Match('=') && pre_tok.IsKeyword()){
-                // 这儿讨巧了。有副作用，但是不会影响正常的流程。
+                // 这儿讨巧了。有副作用，但是不会影响正常的代码。
                 pre_tok.MarkToName();
             }
         }
@@ -429,7 +445,7 @@ public class LuaLex
                     tk.AddStrFlag(m_cur_parse_flag);
                     line.AddToken(tk);
                 }
-                else{
+                else {
                     // 强制结束掉
                     var tk = _NewToken4String("", 0, 0);
                     tk.IsEnded = true;
@@ -443,7 +459,7 @@ public class LuaLex
             if (!last_tok.IsStarted){
                 // 未正常结束
                 last_tok.IsEnded = true;// 强制结束
-                last_tok.MarkError(m_dollar_open_cnt == 0 ? "$string need End or NewLine" : "$string {} mode must match in one line");
+                last_tok.MarkError(m_dollar_open_cnt == 0 ? "$string need End or NewLine" : "$string {} mode must finish in one line");
             }
             else{
                 if (last_tok.Match('$')){
@@ -696,11 +712,12 @@ public class LuaLex
                         }
                         else
                         {
-                            tok.IsStarted = true;
+                            tok.IsStarted = true;// $ 符号有这个判断是不是一个正常的 $string 起点
                             DollarChar = _cur_char;// 进入 $string mode
                             _NextChar();
                         }
                     }
+                    // 语法解析时，$ 符号需要判断 IsStarted
                     return tok;
                 }
                 case '-':
@@ -786,7 +803,6 @@ public class LuaLex
                         _NextChar();
                         return tok;
                     }
-                    break;
                 }
             }
         }
@@ -867,7 +883,7 @@ public class LuaLex
                         case 'x': sub_tok = _ReadHexEsc(); goto save_tok;
                         case 'u': sub_tok = _ReadUnicodeEsc(); goto save_tok;
                         case '\n': { // 行末 \ ，触发换行
-                            sub_tok = _NewTokenInStr("\n", _cur_idx-2, 1);
+                            sub_tok = _NewTokenInStr("\n", _cur_idx-1, 1);
                             tok.AddSubToken(sub_tok);
                             tok.IsStarted = true;// 换行，触发多行逻辑
                             goto finish_read;
@@ -876,7 +892,7 @@ public class LuaLex
                             _NextChar();
                             int zap_num = 2;
                             while(!IsAtEnd && char.IsWhiteSpace(_cur_char)){
-                                _NextChar();
+                            _NextChar();
                                 zap_num++;
                             }
                             sub_tok = _NewTokenInStr("", _cur_idx - zap_num, zap_num);

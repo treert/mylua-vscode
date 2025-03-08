@@ -43,14 +43,16 @@ label ::= '::' Name '::'
 
 funcname ::= Name {'.' Name} [':' Name]
 
-varlist ::= table_index {',' table_index}
+varlist ::= var {',' var}
+
+var := Name | table_index
 
 (* 增加 ? 中断语法。只能用于读取，写入时会报错 *)
-table_index ::=  Name | prefixexp ['?'] ( '[' exp ']' | '.' Name )
+table_index ::=  prefixexp ['?'] ( '[' exp ']' | '.' Name )
 
 functioncall ::=  prefixexp ['?'] [':' Name ['?']] args
 
-prefixexp ::= table_index | functioncall | '(' exp ')'
+prefixexp ::= Name | '(' exp ')' | table_index | functioncall
 
 namelist ::= Name {',' Name}
 

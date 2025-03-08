@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
@@ -244,6 +245,7 @@ public class LuaParser {
         var statement = new ForNumStatement();
         var name = NextToken();// read Name
         NextToken();// skip '='
+        Debug.Assert(name.Match(TokenType.NAME) && LastToken.Match('='));
 
         statement.name = name;
         statement.exp_init = ParseExp();
@@ -551,10 +553,10 @@ public class LuaParser {
         var table = new TableDefine();
         // 考虑缩进
         using(_NewLimitGurad(start_tok, 0)){
-            using(_NewLimitGurad(start_tok, 1)){
+            using(_NewLimitGurad(start_tok, 1)) {
                 TableField last_field = null;
                 int array_idx = 0;
-                while(LookAhead().Match('}')){
+                while(LookAhead().Match('}') == false) {
                     if (LookAhead().Match('[')){
                         last_field = ParseTableIndexField();
                     }
@@ -584,7 +586,22 @@ public class LuaParser {
 
     ArrayDefine ParseArrayConstructor()
     {
-        return null;
+        var start_tok = NextToken();// skip [
+        var array = new ArrayDefine();
+        // 考虑缩进
+        using(_NewLimitGurad(start_tok, 0)){
+            using(_NewLimitGurad(start_tok, 1)){
+                while(IsMainExp()){
+                    var exp = ParseExp();
+                    array.fields.Add(exp);
+                    if (CheckAndNext(',') == false) break;
+                }
+            }
+            if (ExpectAndNext(array, ']') == false){
+                array.AddErrMsgToToken(start_tok, "miss corresponding '}'");
+            }
+        }
+        return array;
     }
 
     bool IsMainExp() {
@@ -608,9 +625,72 @@ public class LuaParser {
             token_type == (int)TokenType.NOT;
     }
 
+    /// <summary>
+    /// 二元运算符的优先级，和lua一样。不知为啥c++的比较运算优先级高于位运算。
+    /// > http://www.lua.org/manual/5.4/manual.html#3.4.8
+    /// > https://en.cppreference.com/w/cpp/language/operator_precedence
+    /// </summary>
+    /// <param name="t"></param>
+    /// <returns></returns>
+    int GetOpPriority(Token t)
+    {
+        switch (t.type)
+        {
+            case (int)TokenType.QQUESTION: return 1;// ??
+            case (int)TokenType.OR: return 10;
+            case (int)TokenType.AND: return 20;
+            case (int)TokenType.NE:
+            case (int)TokenType.EQ: // return 25;// 想了想，和lua保持一致吧
+            case '>':
+            case '<':
+            case (int)TokenType.GE:
+            case (int)TokenType.LE: return 30;
+            case (int)TokenType.DOTS: return 31;
+            case '|': return 31;
+            case '~': return 32;
+            case '&': return 33;
+            case (int)TokenType.SHIFT_LEFT:
+            case (int)TokenType.SHIFT_RIGHT: return 40;
+            case (int)TokenType.CONCAT: return 50;// lua 把字符串连接的优先级放这儿，有什么特别考虑吗？感觉不合适呀
+            case '+':
+            case '-': return 80;
+            case '*':
+            case '/':
+            case (int)TokenType.DIVIDE:
+            case '%': return 90;
+            case '^': return 100;
+            
+            default: return 0;// 无效的运算符也是0
+        }
+    }
+    bool IsRightAssociation(Token t)
+    {
+        return t.type == (int)'^' || t.type == (int)TokenType.QQUESTION || t.type == (int)TokenType.DOTS;
+    }
+
     ExpSyntaxTree ParseExp(int left_priority = 0)
     {
-        return null;
+        var exp = ParseMainExp();
+        while (exp.HasDirectErr == false){
+            // 针对二目算符优先文法的算法
+            int right_priority = GetOpPriority(LookAhead());// 如果错误的Token。会自然的退出
+            if (left_priority < right_priority || (left_priority == right_priority && IsRightAssociation(LookAhead())))
+            {
+                // C++的函数参数执行顺序没有明确定义，方便起见，不在函数参数里搞出两个有依赖的函数调用，方便往C++里迁移
+                var op = NextToken();
+                exp = new BinaryExpression{
+                    left = exp,
+                    right = ParseExp(right_priority),
+                    op = op,
+                };
+            }
+            else
+            {
+                break;
+            }
+
+        }
+        return exp;
     }
 
     TableAccess ParseTableAccessor(ExpSyntaxTree table)
@@ -726,9 +806,25 @@ public class LuaParser {
 
     ExpSyntaxTree ParseDollarExpr()
     {
-        return null;
+        var dollar_tok = NextToken();// skip $
+        if (dollar_tok.IsStarted) {
+            // $string
+            return null;
+        }
+        else if (LookAhead().Match('(','{')){
+            // $function
+            return null;
+        }
+        else {
+            var exp = new InvalidExp();
+            return exp;
+        }
     }
 
+    /// <summary>
+    /// 需要注意：返回 InvalidExp 时。不会调用 NextToken, 上层逻辑需要注意不要出现死循环
+    /// </summary>
+    /// <returns></returns>
     ExpSyntaxTree ParseMainExp()
     {
         ExpSyntaxTree exp;
@@ -738,9 +834,11 @@ public class LuaParser {
             case (int)TokenType.FALSE:
             case (int)TokenType.TRUE:
             case (int)TokenType.NUMBER:
-            case (int)TokenType.STRING:
             case (int)TokenType.DOTS:
                 exp = new Terminator{token = NextToken()};
+                break;
+            case (int)TokenType.STRING:
+                exp = null;// todo read string
                 break;
             case (int)TokenType.FUNCTION:
                 exp = ParseFunctionDef();
@@ -769,7 +867,7 @@ public class LuaParser {
                 exp = unexp;
                 break;
             default:
-                NextToken();
+                // NextToken();// 有可能是 ')' 这种情况下不能吃掉。最后想一想。统一不吃掉
                 exp = new InvalidExp();
                 break;
         }
