@@ -74,6 +74,7 @@ public class FunctionBody : ExpSyntaxTree
     public ParamList param_list;
     public bool has_self = false;// 是否有语法糖增加的self
     public BlockTree block;
+    public bool is_dollar_func = false;
 }
 
 public class ParamList: SyntaxTree

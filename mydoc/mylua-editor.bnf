@@ -72,7 +72,7 @@ args ::=  '(' [args_list] ')' | tableconstructor | LiteralString | dollar_string
 
 args_list ::= { expr ',' } { Name '=' expr ','} { expr ',' } [ Trim ',' ]
 
-functiondef ::= function funcbody
+functiondef ::= 'function' funcbody
 
 funcbody ::= '(' [parlist] ')' block 'end'
 

@@ -298,8 +298,8 @@ public class LuaParser {
         var list = new List<Token>();
         if (LookAhead().Match(TokenType.NAME)){
             list.Add(NextToken());
-            while (LookAhead().Match(',') && LookAhead2().Match(TokenType.NAME)){
-                NextToken();
+            while (LookAhead().Match('.') && LookAhead2().Match(TokenType.NAME)){
+                NextToken();// skip .
                 list.Add(NextToken());
             }
         }
@@ -330,7 +330,7 @@ public class LuaParser {
     FunctionBody ParseFunctionBody(Token fn_tk)
     {
         FunctionBody statment = new FunctionBody();
-        if (CheckAndNext('(')) {
+        if (LookAhead().Match('(')) {
             statment.param_list = ParseParamList();
         }
         else{
@@ -509,9 +509,10 @@ public class LuaParser {
         return false;
     }
 
-    FunctionBody ParseFunctionDef()
+    FunctionBody ParseFunctionExp()
     {
-        return null;
+        var fn_tok = NextToken();
+        return ParseFunctionBody(fn_tok);
     }
 
     TableField ParseTableIndexField()
@@ -804,6 +805,10 @@ public class LuaParser {
         return exp;
     }
 
+    ExpSyntaxTree ParseStringExp(){
+        return null;
+    }
+
     ExpSyntaxTree ParseDollarExpr()
     {
         var dollar_tok = NextToken();// skip $
@@ -838,10 +843,10 @@ public class LuaParser {
                 exp = new Terminator{token = NextToken()};
                 break;
             case (int)TokenType.STRING:
-                exp = null;// todo read string
+                exp = ParseStringExp();
                 break;
             case (int)TokenType.FUNCTION:
-                exp = ParseFunctionDef();
+                exp = ParseFunctionExp();
                 break;
             case '$':
                 exp = ParseDollarExpr();
