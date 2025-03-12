@@ -292,14 +292,17 @@ public class LuaParser {
         return statement;
     }
 
-    // 不会报错。但是如果返回的是空数组。外部应该当成是有错的。
+    /// <summary>
+    /// [Name {',' Name}]
+    /// </summary>
+    /// <returns></returns>
     List<Token> ParseNameList()
     {
         var list = new List<Token>();
         if (LookAhead().Match(TokenType.NAME)){
             list.Add(NextToken());
-            while (LookAhead().Match('.') && LookAhead2().Match(TokenType.NAME)){
-                NextToken();// skip .
+            while (LookAhead().Match(',') && LookAhead2().Match(TokenType.NAME)){
+                NextToken();// skip ,
                 list.Add(NextToken());
             }
         }
@@ -311,7 +314,14 @@ public class LuaParser {
         var fn_tk = NextToken();// skip 'function'
         using (_NewLimitGurad(fn_tk)){
             var statement = new FunctionStatement();
-            statement.names = ParseNameList();
+            // [Name {'.' Name}]
+            if (LookAhead().Match(TokenType.NAME)){
+                statement.names.Add(NextToken());
+                while (LookAhead().Match(',') && LookAhead2().Match(TokenType.NAME)){
+                    NextToken();// skip .
+                    statement.names.Add(NextToken());
+                }
+            }
             if (statement.names.Count == 0){
                 statement.AddErrMsg("function miss name");
             }
@@ -329,21 +339,38 @@ public class LuaParser {
 
     FunctionBody ParseFunctionBody(Token fn_tk)
     {
+        using var _ = _NewLimitGurad(fn_tk);
         FunctionBody statment = new FunctionBody();
-        if (LookAhead().Match('(')) {
-            statment.param_list = ParseParamList();
+        statment.is_dollar_func = fn_tk.Match('$');
+        if (statment.is_dollar_func){
+            if (LookAhead().Match('(')) {
+                statment.param_list = ParseParamList();
+            }
+            if (CheckAndNext('{')) {
+                statment.block = ParseBlock(LastToken);
+                ExpectAndNext(statment, '}');
+            }
+            else {
+                statment.AddErrMsg("$function miss { funcbody }");
+            }
         }
-        else{
-            statment.AddErrMsg("miss '(' to start params");
+        else {
+            if (LookAhead().Match('(')) {
+                statment.param_list = ParseParamList();
+            }
+            else {
+                statment.AddErrMsg("miss '(' to start params");
+            }
+            statment.block = ParseBlock(fn_tk);
+            ExpectAndNextKeyword(statment, TokenType.END);
         }
-        statment.block = ParseBlock(fn_tk);
-        ExpectAndNextKeyword(statment, TokenType.END);
         return statment;
     }
 
     ParamList ParseParamList()
     {
         NextToken();// skip '('
+        using var _ = _NewLimitGurad(LastToken);
         Debug.Assert(LastToken.Match('('));
         ParamList ls = new ParamList();
         ls.name_list = ParseNameList();
@@ -401,7 +428,7 @@ public class LuaParser {
                 statement.items.Add( (name, attr) );
                 if (!CheckAndNext(',')) break;
             }
-            if (LookAhead().Match('=')){
+            if (CheckAndNext('=')){
                 statement.exp_list = ParseExpList();
             }
             return statement;
@@ -455,6 +482,10 @@ public class LuaParser {
         return statement;
     }
 
+    /// <summary>
+    /// 如果 return null, 表示 Block 结束。
+    /// </summary>
+    /// <returns></returns>
     SyntaxTree ParseOtherStatement()
     {
         return null;
@@ -605,8 +636,8 @@ public class LuaParser {
         return array;
     }
 
-    bool IsMainExp() {
-        int token_type = LookAhead().type;
+    bool IsMainExp(Token token = null) {
+        int token_type = token != null ? token.type :LookAhead().type;
         return
             token_type == (int)TokenType.NIL ||
             token_type == (int)TokenType.FALSE ||
@@ -805,7 +836,12 @@ public class LuaParser {
         return exp;
     }
 
+    /// <summary>
+    /// 由于按行解析的。字符串被拆分成了很多段
+    /// </summary>
+    /// <returns></returns>
     ExpSyntaxTree ParseStringExp(){
+
         return null;
     }
 
@@ -818,7 +854,7 @@ public class LuaParser {
         }
         else if (LookAhead().Match('(','{')){
             // $function
-            return null;
+            return ParseFunctionBody(LastToken);
         }
         else {
             var exp = new InvalidExp();
@@ -881,7 +917,23 @@ public class LuaParser {
 
     ExpressionList ParseExpList()
     {
-        return null;
+        var exp = new ExpressionList();
+        if (IsMainExp()) {
+            exp.exp_list.Add(ParseExp());
+            while (CheckAndNext(',')) {
+                if (IsMainExp()){
+                    exp.exp_list.Add(ParseExp());
+                }
+                else {
+                    exp.AddErrMsgToToken(LastToken, "Expect <exp> after ',' in <exp_list>");
+                    break;
+                }
+            }
+        }
+        else {
+            exp.AddErrMsg("Expect <exp_list>");
+        }
+        return exp;
     }
 
     FunctionBody ParseModule(){
@@ -903,7 +955,7 @@ public class LuaParser {
         if (m_ahead_tok == null){
             m_ahead_tok = _ReadNextToken();
         }
-        return _ReturnRealToken(m_ahead_tok);
+        return _Convert2RealToken(m_ahead_tok);
     }
 
     private Token LookAhead2(){
@@ -911,34 +963,32 @@ public class LuaParser {
         if (m_ahead2_tok == null){
             m_ahead2_tok = _ReadNextToken();
         }
-        return _ReturnRealToken(m_ahead2_tok);
+        return _Convert2RealToken(m_ahead2_tok);
     }
 
     Token LastToken => m_last_tok;
 
-    // 所有的读取都要经过这个，会设置 m_last_tok, 并且会执行 _ReturnRealToken 逻辑
+    // 所有的读取都要经过这个，会设置 m_last_tok, 并且会执行 _Convert2RealToken 逻辑
     Token NextToken(){
-        if (m_ahead_tok != null){
-            var tok = m_ahead_tok;
+        m_last_tok = LookAhead();
+        // _Convert2RealToken 可能截断，不实际读取。需要判断下。真的发生读取，才推进
+        if (m_last_tok == m_ahead_tok) {
             m_ahead_tok = m_ahead2_tok;
             m_ahead2_tok = null;
-            m_last_tok = _ReturnRealToken(tok);
-        }
-        else{
-            m_last_tok = _ReturnRealToken(_ReadNextToken());
         }
         return m_last_tok;
     }
 
     // 如果Token不满足当前限制，返回 None。否则返回自己
-    Token _ReturnRealToken(Token token)
+    Token _Convert2RealToken(Token token)
     {
         if (m_line_idx_limit >= 0){
             // 只认当前行的
             if (token.RowIdx != m_line_idx_limit) return Token.None;
         }
         else if(m_tab_size_limit > 0){
-            // 强力限制。如果遇到 字符串那种需要触发换行的。特殊处理好了
+            // 字符串和注释存在换行的情况。不做任何限制
+            // 强力限制。
             if (token.TabSize < m_tab_size_limit) return Token.None;
             // keyword must match tab limit
             // if (token.IsKeyword() && token.TabSize < m_tab_size_limit) return Token.None;
@@ -951,7 +1001,7 @@ public class LuaParser {
     private Token _ReadNextToken(){
         var tok = _inner_next_tok;
         while(tok.IsComment) tok = tok.NextToken;
-        _inner_next_tok = tok.NextToken;
+        _inner_next_tok = tok.NextToken;// None will return None
         return tok;
     }
 
