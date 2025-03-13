@@ -183,6 +183,14 @@ public class Terminator : ExpSyntaxTree
     public bool NameUsedAsStr = false;
 }
 
+/// <summary>
+/// 字符串可能被分成很多段
+/// </summary>
+public class NormalStringExp : ExpSyntaxTree
+{
+    public List<Token> segs = [];
+}
+
 public class BinaryExpression : ExpSyntaxTree
 {
     public ExpSyntaxTree left;

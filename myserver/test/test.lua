@@ -74,3 +74,8 @@ a:print()
 local c = C:new()
 c:fa()
 c:fb()
+
+local str = "asdfa\z 
+
+"
+

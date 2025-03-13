@@ -840,9 +840,13 @@ public class LuaParser {
     /// 由于按行解析的。字符串被拆分成了很多段
     /// </summary>
     /// <returns></returns>
-    ExpSyntaxTree ParseStringExp(){
-
-        return null;
+    ExpSyntaxTree ParseNormalStringExp()
+    {
+        NextToken();
+        Debug.Assert(LastToken.Match(TokenType.STRING));
+        var exp = new NormalStringExp();
+        // todo
+        return exp;
     }
 
     ExpSyntaxTree ParseDollarExpr()
@@ -879,7 +883,7 @@ public class LuaParser {
                 exp = new Terminator{token = NextToken()};
                 break;
             case (int)TokenType.STRING:
-                exp = ParseStringExp();
+                exp = ParseNormalStringExp();
                 break;
             case (int)TokenType.FUNCTION:
                 exp = ParseFunctionExp();

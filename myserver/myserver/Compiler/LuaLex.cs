@@ -892,7 +892,7 @@ public class LuaLex
                             _NextChar();
                             int zap_num = 2;
                             while(!IsAtEnd && char.IsWhiteSpace(_cur_char)){
-                            _NextChar();
+                                _NextChar();
                                 zap_num++;
                             }
                             sub_tok = _NewTokenInStr("", _cur_idx - zap_num, zap_num);
