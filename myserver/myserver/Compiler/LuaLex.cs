@@ -240,7 +240,10 @@ public class Token
 
     public MyLine src_line = null;// None 时，这个是null
     public int start_idx;
-    public int end_idx;// end idx is exclusive
+    /// <summary>
+    /// end idx is exclusive
+    /// </summary>
+    public int end_idx;
     public int tok_idx;// tokens 数组索引
 
     public string err_msg = string.Empty;// 如果不为空，说明有错误
@@ -292,6 +295,8 @@ public class Token
     {
         err_msg = msg;
     }
+
+    public bool HasError => err_msg != string.Empty;
 
     public void MarkToName(){
         type = (int)TokenType.NAME;
@@ -388,7 +393,7 @@ public class LuaLex
         m_cur_parse_flag = TokenStrFlag.Normal;
         {
             if (pre_line?.Tokens.LastOrDefault() is Token tk){
-                if (tk.IsStarted){
+                if (tk.IsStarted && !tk.HasError){
                     m_equal_sep_num = tk.m_equal_sep_num;
                     m_cur_parse_flag = tk.m_str_flag & TokenStrFlag.OnlyStrMask;
                     Debug.Assert(m_cur_parse_flag != TokenStrFlag.Normal);
@@ -428,10 +433,10 @@ public class LuaLex
             }
         }
         // 没读到任何token，需要特殊处理下多行字符串
-        if (last_tok.IsNone){
+        if (last_tok.IsNone) {
             if (m_cur_parse_flag == TokenStrFlag.RawComment || m_cur_parse_flag == TokenStrFlag.RawString){
                 // 增加中间段的空行
-                var tk = _NewToken4String("", 0, 0);
+                var tk = _NewToken4String("\n", 0, 0);
                 tk.IsStarted = true;
                 tk.AddStrFlag(m_cur_parse_flag);
                 tk.m_equal_sep_num = m_equal_sep_num;
@@ -440,7 +445,7 @@ public class LuaLex
             else if (m_cur_parse_flag != TokenStrFlag.Normal){
                 if (IsInZipMode){
                     // zip 模式的中间行
-                    var tk = _NewToken4String("", 0, 0);// 其实区域无所谓
+                    var tk = _NewToken4String("", 0, 0);// zip模式丢弃换行
                     tk.IsStarted = true;
                     tk.AddStrFlag(m_cur_parse_flag);
                     line.AddToken(tk);
@@ -456,16 +461,22 @@ public class LuaLex
         }
         else if (IsInDollarMode){
             // $string 未结束
-            if (!last_tok.IsStarted){
-                // 未正常结束
-                last_tok.IsEnded = true;// 强制结束
-                last_tok.MarkError(m_dollar_open_cnt == 0 ? "$string need End or NewLine" : "$string {} mode must finish in one line");
+            if (m_dollar_open_cnt > 0){
+                // 错误发生。
+                last_tok.MarkError("$string {} mode must finish in one line");
             }
-            else{
-                if (last_tok.Match('$')){
-                    // 一种极限情况 $"\n
-                    last_tok.IsEnded = true;// 强制结束自己
-                    last_tok.MarkError("unfinished empty $string");
+            else {
+                if (last_tok.IsStarted) {
+                    if (last_tok.Match('$')){
+                        // 一种极限情况 $"\n
+                        last_tok.IsEnded = true;// 强制结束自己
+                        last_tok.MarkError("unfinished empty $string");
+                    }
+                }
+                else {
+                    // 未正常结束
+                    last_tok.IsEnded = true;// 强制结束
+                    last_tok.MarkError("$string need End or NewLine");
                 }
             }
         }
@@ -618,7 +629,7 @@ public class LuaLex
         }
     }
 
-    Token _ReadMiddleToken(){
+    Token _ReadMiddleString(){
         if (m_cur_parse_flag == TokenStrFlag.SingleQuote || m_cur_parse_flag == TokenStrFlag.DoubleQuote){
             var tok = _ReadString(m_cur_parse_flag == TokenStrFlag.SingleQuote ? '\'' : '"');
             return tok;
@@ -670,7 +681,7 @@ public class LuaLex
             }
             else {
                 // 一些字符串换行模式。
-                var tok = _ReadMiddleToken();
+                var tok = _ReadMiddleString();
                 if (!tok.IsStarted){
                     // 正常结束
                     tok.IsEnded = true;
@@ -976,39 +987,48 @@ public class LuaLex
         return tok;
     }
 
-    int _SkipAndCountEqualSign(char flag_ch = '=')
+    /// <summary>
+    /// 跳过并计算 [=*[ or ]=*] 的长度。长度包含 [ ] ，有效值 >= 2，无效值强制设置成 0 
+    /// </summary>
+    /// <param name="need_read_flag"> 第一个字符是否需要读取 </param>
+    /// <returns></returns>
+    int _SkipAndCountEqualSign(bool need_read_flag = true)
     {
-        if (flag_ch == '=') {
+        char flag_ch = '[';
+        if (need_read_flag) {
             flag_ch = _cur_char;
             _NextChar();
         }
         Debug.Assert(flag_ch == '[' || flag_ch == ']');
 
-        int count = 0;
+        int count = 1;
         while(_cur_char == '='){
             _NextChar();
             count++;
         }
         if (_cur_char == flag_ch){
-            return count + 2;
+            _NextChar();// skip end flag
+            count++;
         }
-        return 0;// 有问题
+        else {
+            count = 0;
+        }
+        return count;// 有问题
     }
 
     // 尝试读取整段多行字符串。如果一行没有结束，返回false，否则返回true
     bool _TryReadLongStringToEnd(int sep){
-        Debug.Assert(_cur_char == '[' && sep >= 2);
+        Debug.Assert(sep >= 2);
         for(;;){
-            _NextChar();
             if(_cur_char == ']'){
                 if(_SkipAndCountEqualSign() == sep){
-                    _NextChar();// eat it
                     return true;// success end
                 }
             }
-            else if (_cur_char == '\n') {
+            else if (IsAtEnd) {
                 return false;
             }
+            _NextChar();
         }
     }
 
@@ -1076,8 +1096,8 @@ public class LuaLex
         else{
             Debug.Assert(_cur_char == '[' || _cur_char == '=');
             start_idx = _cur_idx - 1;
-            Debug.Assert(_line[start_idx] == '[');
-            sep = _SkipAndCountEqualSign('[');
+            Debug.Assert(_line[start_idx] == '[');// 解析时前面吃掉了一个
+            sep = _SkipAndCountEqualSign(false);
         }
         if (sep >= 2){
             // 多行字符串
@@ -1115,7 +1135,7 @@ public class LuaLex
         else if(IsAtEnd) {
             if (tok.IsStarted) {
                 if (IsInDollarMode){
-                    tok.MarkError("string not support multline in $string");
+                    tok.MarkError("$string inner { string }  not support multline");
                     tok.IsStarted = false;
                 }
             }

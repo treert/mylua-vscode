@@ -845,7 +845,10 @@ public class LuaParser {
         NextToken();
         Debug.Assert(LastToken.Match(TokenType.STRING));
         var exp = new NormalStringExp();
-        // todo
+        exp.segs.Add(LastToken);
+        while (LastToken.IsStarted && !LastToken.IsEnded) {
+            exp.segs.Add(NextToken());
+        }
         return exp;
     }
 
