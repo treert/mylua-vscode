@@ -42,7 +42,12 @@ public enum TokenType
     STRING,// string 由于是按行解析。不会出现多行
 
     Commnet,// 注释
-    Illegal,// 各类非法输入。
+    /// <summary>
+    /// 1. 孤立的非法字符。<br/>
+    /// 2. [=*[ raw_str [=*] 开头格式错误。<br/>
+    /// 3. 特殊分隔符： ${ 
+    /// </summary>
+    Illegal,
 
     // Name，Must place at last
     NAME,
@@ -432,12 +437,13 @@ public class LuaLex
                 pre_tok.MarkToName();
             }
         }
-        // 没读到任何token，需要特殊处理下多行字符串
-        if (last_tok.IsNone) {
+        
+        if (last_tok.IsNone)  // 没读到任何token，需要特殊处理下多行字符串
+        {
             if (m_cur_parse_flag == TokenStrFlag.RawComment || m_cur_parse_flag == TokenStrFlag.RawString){
                 // 增加中间段的空行
                 var tk = _NewToken4String("\n", 0, 0);
-                tk.IsStarted = true;
+                tk.IsStarted = true;// raw 空行
                 tk.AddStrFlag(m_cur_parse_flag);
                 tk.m_equal_sep_num = m_equal_sep_num;
                 line.AddToken(tk);
@@ -446,45 +452,44 @@ public class LuaLex
                 if (IsInZipMode){
                     // zip 模式的中间行
                     var tk = _NewToken4String("", 0, 0);// zip模式丢弃换行
-                    tk.IsStarted = true;
+                    tk.IsStarted = true;// zip 空行
                     tk.AddStrFlag(m_cur_parse_flag);
                     line.AddToken(tk);
                 }
                 else {
                     // 强制结束掉
                     var tk = _NewToken4String("", 0, 0);
-                    tk.IsEnded = true;
+                    tk.IsEnded = true;// 字符串里出现换行。
                     tk.MarkError("unexpect end with empty line");
                     line.AddToken(tk);
                 }
             }
         }
-        else if (IsInDollarMode){
-            // $string 未结束
+        else if (IsInDollarMode)  // $string 未结束
+        {
             if (m_dollar_open_cnt > 0){
-                // 错误发生。
-                last_tok.MarkError("$string {} mode must finish in one line");
+                // $string {} mode is open 
+                var tk = new Token(TokenType.Illegal);// ${ } mode is open
+                tk.SetRange(_cur_idx, _cur_idx);
+                tk.MarkError("$string {} mode must finish in one line");
+                line.AddToken(tk);
+                Debug.Assert(!last_tok.IsStarted);// 可能出现换行的地方需要判断 dollar 模式。
             }
             else {
-                if (last_tok.IsStarted) {
-                    if (last_tok.Match('$')){
-                        // 一种极限情况 $"\n
-                        last_tok.IsEnded = true;// 强制结束自己
-                        last_tok.MarkError("unfinished empty $string");
-                    }
-                }
-                else {
+                if (!last_tok.IsStarted) {
                     // 未正常结束
-                    last_tok.IsEnded = true;// 强制结束
-                    last_tok.MarkError("$string need End or NewLine");
+                    var tk = _NewToken4String("", _cur_idx, 0);
+                    tk.IsEnded = true;// $string 强制结束
+                    tk.MarkError("$string need End or NewLine");
+                    line.AddToken(tk);
                 }
             }
         }
         else if(m_cur_parse_flag != TokenStrFlag.Normal){
             if (!last_tok.IsStarted){
                 // 没有正常结束呢
-                last_tok.IsEnded = true;// 强制借宿
-                if (last_tok.ErrMsg != ""){
+                last_tok.IsEnded = true;// 强制结束
+                if (last_tok.HasError){
                     last_tok.MarkError("string need End or NewLine");
                 }
             }
@@ -558,14 +563,14 @@ public class LuaLex
             _NextChar();
         }
         if (i == 0){
-            return _NewIllegalToken(_cur_idx - 1, 1, "expect digital after '\\' in format '\\ddd'");
+            return _NewErrorString(_cur_idx - 1, 1, "expect digital after '\\' in format '\\ddd'");
         }
         else if (r <= 0xff){
             char c = (char)r;
             return _NewTokenInStr(c.ToString(), _cur_idx - 1 - i, 1+i);
         }
         else{
-            return _NewIllegalToken(_cur_idx - 1-i, 1+i, "too large in format '\\ddd'");
+            return _NewErrorString(_cur_idx - 1-i, 1+i, "too large in format '\\ddd'");
         }
     }
 
@@ -589,7 +594,7 @@ public class LuaLex
             char cc = (char)x;
             return _NewTokenInStr(cc.ToString(), _cur_idx-4, 4);
         }
-        return _NewIllegalToken(_cur_idx - 2 - valid_num, 2 + valid_num, "invalid \\xdd");
+        return _NewErrorString(_cur_idx - 2 - valid_num, 2 + valid_num, "invalid \\xdd");
     }
 
     // \u{aabbccdd}
@@ -613,19 +618,19 @@ public class LuaLex
                         return _NewTokenInStr(cc, _cur_idx - 4 - valid_num, 4+valid_num);
                     }
                     catch{
-                        return _NewIllegalToken( _cur_idx - 4 - valid_num, 4+valid_num, "invalid utf8 code");
+                        return _NewErrorString( _cur_idx - 4 - valid_num, 4+valid_num, "invalid utf8 code");
                     }
                 }
                 else{
-                    return _NewIllegalToken( _cur_idx - 4 - valid_num, 4+valid_num, "invalid utf string");
+                    return _NewErrorString( _cur_idx - 4 - valid_num, 4+valid_num, "invalid utf string");
                 }
             }
             else{
-                return _NewIllegalToken(_cur_idx-3-valid_num, 3+valid_num, "expect valid utf str '\\u{XXXX}'");
+                return _NewErrorString(_cur_idx-3-valid_num, 3+valid_num, "expect valid utf str '\\u{XXXX}'");
             }
         }
         else{
-            return _NewIllegalToken(_cur_idx-2, 2, "expect '{' after '\\u'");
+            return _NewErrorString(_cur_idx-2, 2, "expect '{' after '\\u'");
         }
     }
 
@@ -675,7 +680,7 @@ public class LuaLex
                     ResetParseFlag();// 正常结束
                 }
                 else if (IsAtEnd && !tok.IsStarted){
-                    // 意外结束了。词法分析后续会处理这个情况。flag 残留给后续使用。
+                    // 意外结束了。词法分析后续会处理这个情况。
                 }
                 return tok;
             }
@@ -684,7 +689,7 @@ public class LuaLex
                 var tok = _ReadMiddleString();
                 if (!tok.IsStarted){
                     // 正常结束
-                    tok.IsEnded = true;
+                    tok.IsEnded = true;// 多行字符串没有继续换行
                     ResetParseFlag();
                 }
                 return tok;
@@ -723,9 +728,13 @@ public class LuaLex
                         }
                         else
                         {
-                            tok.IsStarted = true;// $ 符号有这个判断是不是一个正常的 $string 起点
+                            tok.IsStarted = true;// $string 起始的 $ 符号
                             DollarChar = _cur_char;// 进入 $string mode
                             _NextChar();
+                            if (IsAtEnd) {
+                                tok.IsEnded = true;// $" 结尾，强制结束
+                                tok.MarkError("unfinished empty $string");
+                            }
                         }
                     }
                     // 语法解析时，$ 符号需要判断 IsStarted
@@ -854,6 +863,14 @@ public class LuaLex
         return tok;
     }
 
+    Token _NewErrorString(int idx, int length, string err_msg)
+    {
+        var token = _NewToken(TokenType.STRING, idx, idx + length);
+        token.SetStr("");// 错误的字符串
+        token.MarkError(err_msg);
+        return token;
+    }
+
     Token _NewIllegalToken(int idx, int length, string msg)
     {
         var token = _NewToken(TokenType.Illegal, idx, idx + length);
@@ -896,7 +913,7 @@ public class LuaLex
                         case '\n': { // 行末 \ ，触发换行
                             sub_tok = _NewTokenInStr("\n", _cur_idx-1, 1);
                             tok.AddSubToken(sub_tok);
-                            tok.IsStarted = true;// 换行，触发多行逻辑
+                            tok.IsStarted = true;// \ 换行，触发多行逻辑
                             goto finish_read;
                         }
                         case 'z':{ /* zap following span of spaces，支持换行的 */
@@ -910,7 +927,7 @@ public class LuaLex
                             sub_tok.AddStrFlag(TokenStrFlag.ZipMode);
                             if (IsAtEnd) {
                                 tok.AddSubToken(sub_tok);
-                                tok.IsStarted = true;// 换行，触发多行逻辑
+                                tok.IsStarted = true;// \z 换行，触发多行逻辑
                                 tok.AddStrFlag(TokenStrFlag.ZipMode);
                                 goto finish_read;
                             }
@@ -940,7 +957,10 @@ public class LuaLex
         return tok;
     }
 
-    // 读取 $string 里的片段。可能设置 IsEnded
+    /// <summary>
+    /// 读取 $string 里的片段。可能设置 IsEnded
+    /// </summary>
+    /// <returns></returns>
     Token _ReadInDollarString()
     {
         char limit_char = DollarChar;
@@ -968,20 +988,20 @@ public class LuaLex
                 // 允许 $ 结尾 , 结束 $string
                 _NextChar();
                 var tk = _NewToken4String("$", _cur_idx - 2, 1);
-                tk.IsEnded = true;
+                tk.IsEnded = true;// 正常结束
                 return tk;
             }
             else
             {
                 // 只吃掉前面的 $
-                return _NewIllegalToken(_cur_idx-1, 1, "expect $,<alpha>,{ after '$' in <$string>");
+                return _NewErrorString(_cur_idx-1, 1, "expect $,<alpha>,{ after '$' in <$string>");
             }
         }
         
         var tok = _ReadLineStringUtil(limit_char, '$');
         if (_cur_char == limit_char) {
             _NextChar();
-            tok.IsEnded = true;// 正常结束了
+            tok.IsEnded = true;// 正常结束
             return tok;
         }
         return tok;
@@ -1060,7 +1080,7 @@ public class LuaLex
                     tok.MarkError("raw comment not support multline in $string");
                 }
                 else{
-                    tok.IsStarted = true;
+                    tok.IsStarted = true;// raw comment 里的一行
                 }
             }
             return tok;
@@ -1113,14 +1133,15 @@ public class LuaLex
                     tok.MarkError("raw string not support multline in $string");
                 }
                 else{
-                    tok.IsStarted = true;
+                    tok.IsStarted = true;// raw string 里的一行
                 }
             }
             return tok;
         }
+        Debug.Assert(!is_middle);
         // invalid format. 没办法
         {
-            var tok = new Token(TokenType.Illegal);
+            var tok = new Token(TokenType.Illegal);// [=*[ miss [
             tok.SetRange(start_idx, _cur_idx);
             tok.MarkError("raw string start with '[=*['. miss '['?");
             return tok;
@@ -1131,12 +1152,13 @@ public class LuaLex
         var tok = _ReadLineStringUtil(del, del);
         if (_cur_char == del){
             _NextChar();
+            tok.IsEnded = true;// string 正常结束
         }
         else if(IsAtEnd) {
             if (tok.IsStarted) {
                 if (IsInDollarMode){
                     tok.MarkError("$string inner { string }  not support multline");
-                    tok.IsStarted = false;
+                    tok.IsStarted = false;// $string inner { string }  not support multline
                 }
             }
             else{
