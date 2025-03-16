@@ -398,7 +398,7 @@ public class LuaLex
         m_cur_parse_flag = TokenStrFlag.Normal;
         {
             if (pre_line?.Tokens.LastOrDefault() is Token tk){
-                if (tk.IsStarted && !tk.HasError){
+                if (tk.IsStarted && !tk.IsEnded){
                     m_equal_sep_num = tk.m_equal_sep_num;
                     m_cur_parse_flag = tk.m_str_flag & TokenStrFlag.OnlyStrMask;
                     Debug.Assert(m_cur_parse_flag != TokenStrFlag.Normal);
@@ -458,41 +458,37 @@ public class LuaLex
                 }
                 else {
                     // 强制结束掉
-                    var tk = _NewToken4String("", 0, 0);
-                    tk.IsEnded = true;// 字符串里出现换行。
+                    var tk = _NewToken4String("\n", 0, 0);
+                    tk.IsEnded = true;// 多行字符串 遇到空行
                     tk.MarkError("unexpect end with empty line");
                     line.AddToken(tk);
                 }
             }
         }
-        else if (IsInDollarMode)  // $string 未结束
+        else if (IsInDollarMode)  // $string 未结束 需要一波后处理
         {
             if (m_dollar_open_cnt > 0){
-                // $string {} mode is open 
-                var tk = new Token(TokenType.Illegal);// ${ } mode is open
-                tk.SetRange(_cur_idx, _cur_idx);
-                tk.MarkError("$string {} mode must finish in one line");
-                line.AddToken(tk);
-                Debug.Assert(!last_tok.IsStarted);// 可能出现换行的地方需要判断 dollar 模式。
+                // $string {} mode is open. 这种情况下没有对应的End了
+                Debug.Assert(!last_tok.IsStarted || last_tok.IsEnded);// $string {} mode 里不支持换行
+                
+                // 增加这个没有意义哎，语法解析时补充错误信息吧。
+                // var tk = new Token(TokenType.Illegal);// $string {} mode is open
+                // tk.SetRange(_cur_idx, _cur_idx);
+                // tk.MarkError("$string {} mode must finish in one line");
+                // line.AddToken(tk);
             }
             else {
                 if (!last_tok.IsStarted) {
-                    // 未正常结束
+                    // $string 未正常结束 可能情况： 1. } 2. $name 3. str
                     var tk = _NewToken4String("", _cur_idx, 0);
-                    tk.IsEnded = true;// $string 强制结束
+                    tk.IsEnded = true;// $string 缺少换行强制结束。可能情况： 1. } 2. $name 3. str
                     tk.MarkError("$string need End or NewLine");
                     line.AddToken(tk);
                 }
             }
         }
         else if(m_cur_parse_flag != TokenStrFlag.Normal){
-            if (!last_tok.IsStarted){
-                // 没有正常结束呢
-                last_tok.IsEnded = true;// 强制结束
-                if (last_tok.HasError){
-                    last_tok.MarkError("string need End or NewLine");
-                }
-            }
+            Debug.Assert(last_tok.IsStarted && m_dollar_open_cnt == 0);
         }
         return true;
     }
@@ -679,17 +675,16 @@ public class LuaLex
                 if (tok.IsEnded){
                     ResetParseFlag();// 正常结束
                 }
-                else if (IsAtEnd && !tok.IsStarted){
-                    // 意外结束了。词法分析后续会处理这个情况。
+                else if (IsAtEnd){
+                    // ParseOneLine 最后校验下异常情况
                 }
                 return tok;
             }
             else {
                 // 一些字符串换行模式。
                 var tok = _ReadMiddleString();
-                if (!tok.IsStarted){
-                    // 正常结束
-                    tok.IsEnded = true;// 多行字符串没有继续换行
+                Debug.Assert(tok.m_str_flag != TokenStrFlag.Normal);
+                if (tok.IsEnded){
                     ResetParseFlag();
                 }
                 return tok;
@@ -734,6 +729,7 @@ public class LuaLex
                             if (IsAtEnd) {
                                 tok.IsEnded = true;// $" 结尾，强制结束
                                 tok.MarkError("unfinished empty $string");
+                                ResetParseFlag();
                             }
                         }
                     }
@@ -871,6 +867,7 @@ public class LuaLex
         return token;
     }
 
+    // 非法字符
     Token _NewIllegalToken(int idx, int length, string msg)
     {
         var token = _NewToken(TokenType.Illegal, idx, idx + length);
@@ -988,7 +985,7 @@ public class LuaLex
                 // 允许 $ 结尾 , 结束 $string
                 _NextChar();
                 var tk = _NewToken4String("$", _cur_idx - 2, 1);
-                tk.IsEnded = true;// 正常结束
+                tk.IsEnded = true;// $string 以 $ 正常结束
                 return tk;
             }
             else
@@ -1001,7 +998,7 @@ public class LuaLex
         var tok = _ReadLineStringUtil(limit_char, '$');
         if (_cur_char == limit_char) {
             _NextChar();
-            tok.IsEnded = true;// 正常结束
+            tok.IsEnded = true;// $string 正常结束
             return tok;
         }
         return tok;
@@ -1078,10 +1075,14 @@ public class LuaLex
                 if(IsInDollarMode){
                     // $string 里不支持多行字符串
                     tok.MarkError("raw comment not support multline in $string");
+                    tok.IsEnded = true;// raw commnet in $string {} 不支持换行
                 }
                 else{
                     tok.IsStarted = true;// raw comment 里的一行
                 }
+            }
+            else{
+                tok.IsEnded = true;// raw comment 正常结束
             }
             return tok;
         }
@@ -1131,10 +1132,14 @@ public class LuaLex
                 if(IsInDollarMode){
                     // $string 里不支持多行字符串
                     tok.MarkError("raw string not support multline in $string");
+                    tok.IsEnded = true;// raw string in $string {} 不支持换行
                 }
                 else{
                     tok.IsStarted = true;// raw string 里的一行
                 }
+            }
+            else{
+                tok.IsEnded = true;// raw string 正常结束
             }
             return tok;
         }
@@ -1158,11 +1163,11 @@ public class LuaLex
             if (tok.IsStarted) {
                 if (IsInDollarMode){
                     tok.MarkError("$string inner { string }  not support multline");
-                    tok.IsStarted = false;// $string inner { string }  not support multline
+                    tok.IsEnded = true;// $string inner { string } not support multline
                 }
             }
             else{
-                // 意外结束了。
+                tok.IsEnded = true; // string 没有换行，强制结束
                 tok.MarkError("unfinished string");
             }
         }
