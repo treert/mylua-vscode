@@ -239,6 +239,17 @@ public class Token
         }
     }
 
+    /// <summary>
+    /// ' , " or #
+    /// </summary>
+    public char StringLimitChar {
+        get {
+            if (TestStrFlag(TokenStrFlag.SingleQuote)) return '\'';
+            else if (TestStrFlag(TokenStrFlag.DoubleQuote)) return '"';
+            else return '#';// 只是个无效字符而已
+        }
+    }
+
     public bool IsNone => Match(TokenType.None);// 其实可以直接用 == None
 
     public bool IsComment => Match(TokenType.Commnet);
@@ -364,7 +375,7 @@ public class LuaLex
         get {
             if (m_cur_parse_flag == TokenStrFlag.DollarSingleQuote) return '\'';
             else if (m_cur_parse_flag == TokenStrFlag.DollarDoubleQuote) return '"';
-            else return '\0';
+            else return '#';
         }
         set {
             if (value == '"') m_cur_parse_flag = TokenStrFlag.DollarDoubleQuote;
@@ -806,7 +817,7 @@ public class LuaLex
                     else if (IsWordLetter(_cur_char)) return _ReadNameOrKeyword();
                     else if(char.IsAscii(_cur_char)) {/* single-char tokens ('+', '*', '%', '{', '}', ...) */
                         var tok = _NewTokenForCurChar(); // 可能是错误的，由 parser 来 Mark
-                        if (DollarChar != '\0') {
+                        if (DollarChar != '#') {
                             Debug.Assert(m_dollar_open_cnt > 0);
                             if ('{' == _cur_char) ++m_dollar_open_cnt;
                             else if('}' == _cur_char) --m_dollar_open_cnt;

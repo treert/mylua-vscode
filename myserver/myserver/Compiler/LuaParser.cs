@@ -837,17 +837,26 @@ public class LuaParser {
     }
 
     /// <summary>
-    /// 由于按行解析的。字符串被拆分成了很多段
+    /// 由于按行解析的。多行字符串被拆分成了很多段。
     /// </summary>
     /// <returns></returns>
     ExpSyntaxTree ParseNormalStringExp()
     {
-        NextToken();
-        Debug.Assert(LastToken.Match(TokenType.STRING));
+        var start_tok = NextToken();
+        Debug.Assert(start_tok.Match(TokenType.STRING));
         var exp = new NormalStringExp();
-        exp.segs.Add(LastToken);
+        exp.segs.Add(start_tok);
         while (LastToken.IsStarted && !LastToken.IsEnded) {
-            exp.segs.Add(NextToken());
+            if (LookAhead().Match(TokenType.STRING)){
+                exp.segs.Add(NextToken());
+            }
+            else {
+                Debug.Assert(LookAhead().IsNone);
+                break;
+            }
+        }
+        if (LastToken.IsEnded == false){
+            exp.AddErrMsgToToken(start_tok, $"miss {start_tok.StringLimitChar} to end string");
         }
         return exp;
     }
