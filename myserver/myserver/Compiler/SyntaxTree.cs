@@ -191,6 +191,17 @@ public class NormalStringExp : ExpSyntaxTree
     public List<Token> segs = [];
 }
 
+public class DollarStringSegExp : ExpSyntaxTree
+{
+    public Token? str_or_name_seg = null;
+    public ExpSyntaxTree? exp = null;
+}
+
+public class DollarStringExp : ExpSyntaxTree
+{
+    public List<DollarStringSegExp> segs = [];
+}
+
 public class BinaryExpression : ExpSyntaxTree
 {
     public ExpSyntaxTree left;

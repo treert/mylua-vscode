@@ -45,7 +45,6 @@ public enum TokenType
     /// <summary>
     /// 1. 孤立的非法字符。<br/>
     /// 2. [=*[ raw_str [=*] 开头格式错误。<br/>
-    /// 3. 特殊分隔符： ${ 
     /// </summary>
     Illegal,
 
@@ -262,7 +261,7 @@ public class Token
     public int end_idx;
     public int tok_idx;// tokens 数组索引
 
-    public string err_msg = string.Empty;// 如果不为空，说明有错误
+    private string err_msg = string.Empty;// 如果不为空，说明有错误
     public List<Token> m_sub_toks = null;
 
 
@@ -481,12 +480,6 @@ public class LuaLex
             if (m_dollar_open_cnt > 0){
                 // $string {} mode is open. 这种情况下没有对应的End了
                 Debug.Assert(!last_tok.IsStarted || last_tok.IsEnded);// $string {} mode 里不支持换行
-                
-                // 增加这个没有意义哎，语法解析时补充错误信息吧。
-                // var tk = new Token(TokenType.Illegal);// $string {} mode is open
-                // tk.SetRange(_cur_idx, _cur_idx);
-                // tk.MarkError("$string {} mode must finish in one line");
-                // line.AddToken(tk);
             }
             else {
                 if (!last_tok.IsStarted) {

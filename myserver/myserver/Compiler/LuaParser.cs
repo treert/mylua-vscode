@@ -858,6 +858,23 @@ public class LuaParser {
         if (LastToken.IsEnded == false){
             exp.AddErrMsgToToken(start_tok, $"miss {start_tok.StringLimitChar} to end string");
         }
+        else if (LastToken.HasError){
+            // 可有可无
+            // exp.AddErrMsgToToken(LastToken, LastToken.ErrMsg);
+        }
+        return exp;
+    }
+
+    ExpSyntaxTree ParseDollarStringExp()
+    {
+        Debug.Assert(LastToken.Match('$') && LastToken.IsStarted);
+        var exp = new DollarStringSegExp();
+        if (LastToken.IsEnded == false){
+            // 一行一行的读
+        }
+        else {
+            // $" 结尾的。
+        }
         return exp;
     }
 
@@ -866,7 +883,7 @@ public class LuaParser {
         var dollar_tok = NextToken();// skip $
         if (dollar_tok.IsStarted) {
             // $string
-            return null;
+            return ParseDollarStringExp();
         }
         else if (LookAhead().Match('(','{')){
             // $function
