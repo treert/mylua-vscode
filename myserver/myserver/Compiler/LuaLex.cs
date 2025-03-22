@@ -676,8 +676,10 @@ public class LuaLex
         if (m_dollar_open_cnt == 0 && m_cur_parse_flag != TokenStrFlag.Normal){
             if (IsInDollarMode) {
                 var tok = _ReadInDollarString();
+                tok.AddStrFlag(TokenStrFlag.Dollar);// $string 里的片段，标记下
+                Debug.Assert(tok.Match(TokenType.NAME) || tok.Match(TokenType.STRING));
                 if (tok.IsEnded){
-                    ResetParseFlag();// 正常结束
+                    ResetParseFlag();// $string 正常结束
                 }
                 else if (IsAtEnd){
                     // ParseOneLine 最后校验下异常情况

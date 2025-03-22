@@ -64,9 +64,9 @@ public class LuaParser {
         return block;
     }
 
-    BlockTree ParseBlock(int tab_size_limit, int line_idx_limit = -1)
+    BlockTree ParseBlock(int tab_size_limit)
     {
-        using(new MyParseLimitGuard(this, tab_size_limit, line_idx_limit))
+        using(new MyParseLimitTabGuard(this, tab_size_limit))
         {
             return ParseBlock();
         }
@@ -88,7 +88,7 @@ public class LuaParser {
     void GoToNextKeyword(SyntaxTree root_tree)
     {
         int line_idx_limit = LastToken.RowIdx;
-        using(new MyParseLimitGuard(this, m_tab_size_limit, line_idx_limit)){
+        using(new MyParseLimitLineGuard(this, line_idx_limit)){
             for(;;){
                 var tok = LookAhead();
                 if (tok.IsKeyword()) return;
@@ -105,7 +105,7 @@ public class LuaParser {
     /// <param name="ch"></param>
     void GoToNextKeywordOrBracket(SyntaxTree tree, char ch = '\0'){
         int line_idx_limit = LastToken.RowIdx;
-        using(new MyParseLimitGuard(this, m_tab_size_limit, line_idx_limit)){
+        using(new MyParseLimitLineGuard(this, line_idx_limit)){
             for(;;){
                 var tok = LookAhead();
                 if (tok.IsNone) return;// 结束了
@@ -120,9 +120,9 @@ public class LuaParser {
         }
     }
 
-    MyParseLimitGuard _NewLimitGurad(Token token, int plus = 0)
+    MyParseLimitTabGuard _NewLimitTabGurad(Token token, int plus = 0)
     {
-        return new MyParseLimitGuard(this, token.TabSize + plus);
+        return new MyParseLimitTabGuard(this, token.TabSize + plus);
     }
 
     private SyntaxTree ParseLabelStatement(){
@@ -148,7 +148,7 @@ public class LuaParser {
 
         var statement = new IfStatement();
         Token tok_wait_end = null;
-        using(_NewLimitGurad(tok_if)){
+        using(_NewLimitTabGurad(tok_if)){
             statement.exp = ParseExp();
             GoToNextKeyword(statement);
             // then
@@ -193,7 +193,7 @@ public class LuaParser {
         DoStatement statement = new DoStatement();
         NextToken();// Skip 'do'
         var tk_do = LastToken;
-        using(_NewLimitGurad(tk_do))
+        using(_NewLimitTabGurad(tk_do))
         {
             statement.block = ParseBlockLimitByLastToken();
             if (!CheckAndNext(TokenType.END)){
@@ -208,7 +208,7 @@ public class LuaParser {
         NextToken();// skip 'while'
         var statement = new WhileStatement();
         var tk_while = LastToken;
-        using (_NewLimitGurad(tk_while)){
+        using (_NewLimitTabGurad(tk_while)){
             statement.exp = ParseExp();
             GoToNextKeyword(statement);
             if (CheckAndNext(TokenType.DO)){
@@ -229,7 +229,7 @@ public class LuaParser {
     {
         NextToken();// skip 'for'
         var for_tk = LastToken;
-        using (_NewLimitGurad(for_tk)){
+        using (_NewLimitTabGurad(for_tk)){
             if (LookAhead().Match(TokenType.NAME) && LookAhead2().Match('=')){
                 return ParseForNumStatement();
             }
@@ -312,7 +312,7 @@ public class LuaParser {
     FunctionStatement ParseFunctionStatement()
     {
         var fn_tk = NextToken();// skip 'function'
-        using (_NewLimitGurad(fn_tk)){
+        using (_NewLimitTabGurad(fn_tk)){
             var statement = new FunctionStatement();
             // [Name {'.' Name}]
             if (LookAhead().Match(TokenType.NAME)){
@@ -339,7 +339,7 @@ public class LuaParser {
 
     FunctionBody ParseFunctionBody(Token fn_tk)
     {
-        using var _ = _NewLimitGurad(fn_tk);
+        using var _ = _NewLimitTabGurad(fn_tk);
         FunctionBody statment = new FunctionBody();
         statment.is_dollar_func = fn_tk.Match('$');
         if (statment.is_dollar_func){
@@ -370,7 +370,7 @@ public class LuaParser {
     ParamList ParseParamList()
     {
         NextToken();// skip '('
-        using var _ = _NewLimitGurad(LastToken);
+        using var _ = _NewLimitTabGurad(LastToken);
         Debug.Assert(LastToken.Match('('));
         ParamList ls = new ParamList();
         ls.name_list = ParseNameList();
@@ -398,7 +398,7 @@ public class LuaParser {
     SyntaxTree ParseLocalStatement()
     {
         var loc_tk = NextToken();
-        using var _ = _NewLimitGurad(loc_tk);
+        using var _ = _NewLimitTabGurad(loc_tk);
         if (LookAhead().Match(TokenType.FUNCTION)){
             var fn_tk = NextToken();
             var statement = new LocalFunctionStatement();
@@ -474,7 +474,7 @@ public class LuaParser {
     {
         NextToken();
         var statement = new RepeatStatement();
-        using var _ = _NewLimitGurad(LastToken);
+        using var _ = _NewLimitTabGurad(LastToken);
         statement.block = ParseBlockLimitByLastToken();
         if(ExpectAndNextKeyword(statement, TokenType.UNTIL)){
             statement.exp = ParseExp();
@@ -584,8 +584,8 @@ public class LuaParser {
         var start_tok = NextToken();// skip {
         var table = new TableDefine();
         // 考虑缩进
-        using(_NewLimitGurad(start_tok, 0)){
-            using(_NewLimitGurad(start_tok, 1)) {
+        using(_NewLimitTabGurad(start_tok, 0)){
+            using(_NewLimitTabGurad(start_tok, 1)) {
                 TableField last_field = null;
                 int array_idx = 0;
                 while(LookAhead().Match('}') == false) {
@@ -621,8 +621,8 @@ public class LuaParser {
         var start_tok = NextToken();// skip [
         var array = new ArrayDefine();
         // 考虑缩进
-        using(_NewLimitGurad(start_tok, 0)){
-            using(_NewLimitGurad(start_tok, 1)){
+        using(_NewLimitTabGurad(start_tok, 0)){
+            using(_NewLimitTabGurad(start_tok, 1)){
                 while(IsMainExp()){
                     var exp = ParseExp();
                     array.fields.Add(exp);
@@ -868,14 +868,68 @@ public class LuaParser {
     ExpSyntaxTree ParseDollarStringExp()
     {
         Debug.Assert(LastToken.Match('$') && LastToken.IsStarted);
-        var exp = new DollarStringSegExp();
+        var dollar_tok = LastToken;
+        var dollar_str = new DollarStringExp();
         if (LastToken.IsEnded == false){
             // 一行一行的读
+            int line_num = LastToken.RowIdx;
+            for(;;){
+                {
+                    using var _ = new MyParseLimitLineGuard(this, line_num);
+                    while(LookAhead().IsNone == false){
+                        if (LookAhead().TestStrFlag(TokenStrFlag.Dollar)){
+                            dollar_str.AddErrToken(NextToken());
+                            continue;
+                        }
+                        if (LookAhead().Match('{')){
+                            // ${} mode
+                            var seg = new DollarStringSegExp();
+                            var exp_start = NextToken();
+                            seg.exp = ParseExp();
+                            if (CheckAndNext('}') == false){
+                                seg.AddErrMsgToToken(exp_start, "miss corresponding '}'");
+                            }
+                            dollar_str.segs.Add(seg);
+                        }
+                        else if(LookAhead().Match(TokenType.STRING)){
+                            var seg = new DollarStringSegExp();
+                            seg.str_or_name_seg = NextToken();
+                            dollar_str.segs.Add(seg);
+                            if (LastToken.IsEnded){
+                                goto finish_read;// 正确结束解析
+                            }
+                            if (LastToken.IsStarted){
+                                Debug.Assert(LookAhead().IsNone);
+                                break;// 下一行
+                            }
+                        }
+                        else if(LookAhead().Match(TokenType.NAME)){
+                            var seg = new DollarStringSegExp();
+                            seg.str_or_name_seg = NextToken();
+                            dollar_str.segs.Add(seg);
+                        }
+                        else{
+                            Debug.Assert(false);
+                        }
+                    }
+                }
+                // 下一行
+                if (LastToken.IsStarted && LookAhead().IsNone == false){
+                    line_num ++;
+                    continue;
+                }
+                else{
+                    // 有什么意外发生了，$string 没有正确结束
+                    dollar_str.AddErrMsgToToken(dollar_tok, "$string miss end.");
+                }
+            }
+            finish_read:;
         }
         else {
             // $" 结尾的。
+            dollar_str.AddErrMsg("$string unfinished");
         }
-        return exp;
+        return dollar_str;
     }
 
     ExpSyntaxTree ParseDollarExpr()
@@ -1038,34 +1092,43 @@ public class LuaParser {
         return tok;
     }
 
-    private void ThrowParseException(string message){
-        throw new ParseException(message);
-    }
-
     Token _inner_next_tok = Token.None;// 内部用这个token往后读
 
-    class MyParseLimitGuard : IDisposable
+    class MyParseLimitLineGuard : IDisposable
     {
-        public MyParseLimitGuard(LuaParser parser, int tab_size_limit, int line_idx_limit = -1){
+        public MyParseLimitLineGuard(LuaParser parser, int line_idx_limit){
             Parser = parser;
-            pre_line_idx_limit = parser.m_line_idx_limit;
-            pre_tab_size_limit = parser.m_tab_size_limit;
-            parser.m_line_idx_limit = line_idx_limit;
-            parser.m_tab_size_limit = tab_size_limit;
-        }
-        public void Dispose()
-        {
-            Parser.m_line_idx_limit = pre_line_idx_limit;
-            Parser.m_tab_size_limit = pre_tab_size_limit;
+            pre_line_idx_limit = Parser.m_line_idx_limit;
+            Parser.m_line_idx_limit = line_idx_limit;
         }
 
+        public void Dispose(){
+            Parser.m_line_idx_limit = pre_line_idx_limit;
+        }
+        
         LuaParser Parser;
-        int pre_line_idx_limit = -1;
-        int pre_tab_size_limit = 0;
+        int pre_line_idx_limit;
     }
 
-    int m_line_idx_limit = -1;// 限制只读取特定行的token
+    class MyParseLimitTabGuard : IDisposable
+    {
+        public MyParseLimitTabGuard(LuaParser parser, int tab_size_limit){
+            Parser = parser;
+            pre_tab_size_limit = Parser.m_tab_size_limit;
+            Parser.m_tab_size_limit = tab_size_limit;
+        }
+
+        public void Dispose(){
+            Parser.m_tab_size_limit = pre_tab_size_limit;
+        }
+        
+        LuaParser Parser;
+        int pre_tab_size_limit;
+    }
+
+    int m_line_idx_limit = -1;// 限制只读取特定行的token。优先级更高
     int m_tab_size_limit = 0;// 限制token需要满足缩进规则
+
     Token m_last_tok = Token.None;// 当前的token，也是最近读到的token
     Token? m_ahead_tok = null;
     Token? m_ahead2_tok = null;
