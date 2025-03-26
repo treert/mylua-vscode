@@ -14,6 +14,8 @@ var lines = File.ReadAllLines(@".\test.lua");
 
 MyFile myFile= new MyFile(lines);
 myFile.ParseTokens();
+LuaParser luaParser= new LuaParser();
+var tree = luaParser.Parse(myFile);
 
 
 //JsonRpcMgr.Instance.Init();

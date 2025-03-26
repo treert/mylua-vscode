@@ -147,7 +147,7 @@ public class Token
                 else{
                     // 找一个有效的
                     MyLine line = src_line.NextLine;
-                    while(line != null && line.Tokens.Count > 0) line = line.NextLine;
+                    while(line != null && line.Tokens.Count == 0) line = line.NextLine;
                     if (line is not null) return line.Tokens[0];
                 }
             }
@@ -165,7 +165,7 @@ public class Token
                 else{
                     // 找一个有效的
                     MyLine line = src_line.PreLine;
-                    while(line != null && line.Tokens.Count > 0) line = line.PreLine;
+                    while(line != null && line.Tokens.Count == 0) line = line.PreLine;
                     if (line is not null) return line.LastToken;
                 }
             }
@@ -1107,6 +1107,7 @@ public class LuaLex
         // 直接到行尾
         var tok = new Token(TokenType.Commnet);
         _cur_idx = _line.Length;// 直接读到最后
+        _cur_char = '\n';
         tok.SetRange(start_idx, _line.Length);
         return tok;
     }

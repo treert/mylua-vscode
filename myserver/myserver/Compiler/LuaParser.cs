@@ -64,9 +64,9 @@ public class LuaParser {
         return block;
     }
 
-    BlockTree ParseBlock(int tab_size_limit)
+    BlockTree ParseBlock(int tab_size_limit, int exclude_line_idx)
     {
-        using(new MyParseLimitTabGuard(this, tab_size_limit))
+        using(new MyParseLimitTabGuard(this, tab_size_limit, exclude_line_idx))
         {
             return ParseBlock();
         }
@@ -74,11 +74,11 @@ public class LuaParser {
 
     // 解析一个区块，不过缩进限制大于最近的Token。
     BlockTree ParseBlockLimitByLastToken(){
-        return ParseBlock(LastToken.TabSize + 1);
+        return ParseBlock(LastToken.TabSize + 1, LastToken.RowIdx);
     }
 
     BlockTree ParseBlock(Token token){
-        return ParseBlock(token.TabSize + 1);
+        return ParseBlock(token.TabSize + 1, token.RowIdx);
     }
 
     /// <summary>
@@ -122,7 +122,7 @@ public class LuaParser {
 
     MyParseLimitTabGuard _NewLimitTabGurad(Token token, int plus = 0)
     {
-        return new MyParseLimitTabGuard(this, token.TabSize + plus);
+        return new MyParseLimitTabGuard(this, token.TabSize + plus, token.RowIdx);
     }
 
     private SyntaxTree ParseLabelStatement(){
@@ -927,7 +927,7 @@ public class LuaParser {
         }
         else {
             // $" 结尾的。
-            dollar_str.AddErrMsg("$string unfinished");
+            dollar_str.AddErrMsg("empty $string unfinished");
         }
         return dollar_str;
     }
@@ -1024,10 +1024,13 @@ public class LuaParser {
     }
 
     FunctionBody ParseModule(){
-        return null;
+        FunctionBody statment = new FunctionBody();
+        statment.param_list = new ParamList{is_vararg = true};
+        statment.block = ParseBlock();
+        return statment;
     }
 
-    // 解析文件局部形成语法树
+    // 解析文件
     public SyntaxTree Parse(MyFile myfile){
         _inner_next_tok = myfile.GetFirstToken();
 
@@ -1035,7 +1038,7 @@ public class LuaParser {
         m_ahead2_tok = null;
         m_tab_size_limit = 0;
         m_line_idx_limit = -1;
-        return null;
+        return ParseModule();
     }
 
     private Token LookAhead(){
@@ -1074,6 +1077,7 @@ public class LuaParser {
             if (token.RowIdx != m_line_idx_limit) return Token.None;
         }
         else if(m_tab_size_limit > 0){
+            if (token.RowIdx == _tab_limit_exclue_line_idx) return token;// 豁免
             // 字符串和注释存在换行的情况。不做任何限制
             // 强力限制。
             if (token.TabSize < m_tab_size_limit) return Token.None;
@@ -1112,47 +1116,29 @@ public class LuaParser {
 
     class MyParseLimitTabGuard : IDisposable
     {
-        public MyParseLimitTabGuard(LuaParser parser, int tab_size_limit){
+        public MyParseLimitTabGuard(LuaParser parser, int tab_size_limit, int tab_limit_exclue_line_idx){
             Parser = parser;
+            pre_tab_limit_exclue_line_idx = tab_limit_exclue_line_idx;
             pre_tab_size_limit = Parser.m_tab_size_limit;
             Parser.m_tab_size_limit = tab_size_limit;
+            Parser._tab_limit_exclue_line_idx = tab_limit_exclue_line_idx;
         }
 
         public void Dispose(){
             Parser.m_tab_size_limit = pre_tab_size_limit;
+            Parser._tab_limit_exclue_line_idx = pre_tab_limit_exclue_line_idx;
         }
         
         LuaParser Parser;
         int pre_tab_size_limit;
+        int pre_tab_limit_exclue_line_idx;
     }
 
     int m_line_idx_limit = -1;// 限制只读取特定行的token。优先级更高
     int m_tab_size_limit = 0;// 限制token需要满足缩进规则
+    int _tab_limit_exclue_line_idx = -1;
 
     Token m_last_tok = Token.None;// 当前的token，也是最近读到的token
     Token? m_ahead_tok = null;
     Token? m_ahead2_tok = null;
-}
-
-
-/*
-新的想法：先用1-2个pass初步吧 Token List 分解成语法树半成品，然后在细处理每个语法树节点。
-
-未想好的地方：
-1. 代码如何组织的问题。
-2. 对于在中间修改源文件的情况如何高效实现。【这个更难一点】
-*/
-
-
-/*
-先用括号匹配的方式，初步划分出区块，就像脚手架一样。
-i
-*/
-
-
-
-public class LuaTokenRange{
-    public void XX(){
-
-    }
 }
