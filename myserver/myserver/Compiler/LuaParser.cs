@@ -564,7 +564,7 @@ public class LuaParser {
     }
     TableField ParseTableNameField()
     {
-        Debug.Assert(LookAhead().Match(TokenType.NAME) && LookAhead().Match('='));
+        Debug.Assert(LookAhead().Match(TokenType.NAME) && LookAhead2().Match('='));
         var field = new TableField();
         field.index = new Terminator{token = NextToken(), NameUsedAsStr = true};
         NextToken();// skip '='
