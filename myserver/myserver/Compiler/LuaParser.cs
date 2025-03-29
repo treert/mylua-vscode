@@ -482,13 +482,71 @@ public class LuaParser {
         return statement;
     }
 
+    static bool IsVar(ExpSyntaxTree exp)
+    {
+        return exp is TableAccess || (exp is Terminator ter && ter.IsName);
+    }
+
     /// <summary>
+    /// 1. varlist '=' explist
+    /// 2. functioncall
+    /// 
     /// 如果 return null, 表示 Block 结束。
     /// </summary>
     /// <returns></returns>
     SyntaxTree ParseOtherStatement()
     {
-        return null;
+        if (LookAhead().Match(TokenType.END) || LookAhead().IsNone || LookAhead().Match('}')){
+            return null;// 这些可能是标记了 block 的结束
+        }
+        if (IsMainExp()){
+            var head_tok = LookAhead();
+            var exp = ParseMainExp();
+            Debug.Assert(exp is not InvalidExp);
+            if (LookAhead().Match('=',',')) // varlist '=' explist
+            {
+                var statement = new AssignStatement();
+                if (!IsVar(exp)) exp.AddErrMsg("exp should be table_access or just a Name");
+                statement.var_list.Add(exp);
+                while(CheckAndNext(',')){
+                    if (IsMainExp() == false){
+                        statement.AddErrMsgToToken(LastToken, "expect var after ',' ");
+                        break;
+                    }
+                    exp = ParseMainExp();
+                    Debug.Assert(exp is not InvalidExp);
+                    if (!IsVar(exp)) exp.AddErrMsg("exp should be table_access or just a Name");
+                    statement.var_list.Add(exp);
+                }
+                if (CheckAndNext('=')){
+                    statement.exp_list = ParseExpList();
+                }
+                else {
+                    statement.AddErrMsgToToken(LastToken, "expect '=' to contine varlist '=' explist");
+                }
+                return statement;
+            }
+            else {
+                if (exp is FuncCall funcCall){ // functioncall
+                    var statement = new FuncCallStatement();
+                    statement.funcCall = funcCall;
+                    return statement;
+                }
+                else{ // other invalid exp
+                    var statement = new InvalidStatement();
+                    statement.exp = exp;
+                    return statement;
+                }
+            }
+        }
+        else{
+            var statement = new InvalidStatement();
+            var head_tok = LookAhead();
+            statement.AddErrToken(NextToken());
+            // 往后吃掉一行错误的 token
+            GoToNextKeywordOrBracket(statement);
+            return statement;
+        }
     }
 
     /// <summary>
@@ -499,9 +557,11 @@ public class LuaParser {
     /// <returns></returns>
     bool ExpectAndNextKeyword(SyntaxTree syntax, TokenType keyword){
         GoToNextKeyword(syntax);
-        if (!CheckAndNext(keyword))
+        if (!CheckAndNext(keyword)){
             syntax.AddErrMsg($"miss <{keyword.ToString().ToLower()}>");
-        return false;
+            return false;
+        }
+        return true;
     }
 
     /// <summary>
@@ -752,23 +812,73 @@ public class LuaParser {
         return index_access;
     }
 
-    FuncCall ParseFunctionCall(ExpSyntaxTree caller)
+    FuncCall ParseFunctionCall(ExpSyntaxTree caller, Token self_key = null)
     {
-        Debug.Assert(IsArgsCanStart());
-        var func_call = new FuncCall();
-        func_call.caller = caller;
-        func_call.args = ParseArgs();
+        var func_call = new FuncCall{ caller = caller};
+        if(LookAhead().Match(':'))
+        {
+            NextToken();// skip :
+            if (LookAhead().Match(TokenType.NAME))
+            {
+                func_call.self_key = NextToken();
+            }
+            else{
+                func_call.AddErrMsgToToken(LastToken, "expect <Name> after ':'");
+                return func_call;// 出错了。直接退出
+            }
+        }
+        if (LookAhead().Match('(')){
+            func_call.args = ParseArgs();
+        }
+        else if(IsArgsCanStart()){
+            func_call.single_exp_arg = ParseMainExp();
+        }
         return func_call;
     }
 
     bool IsArgsCanStart(){
         var ahead = LookAhead();
-        return ahead.Match('$','(', '{') && ahead.Match(TokenType.STRING);
+        return ahead.Match('$','(', '{') || ahead.Match(TokenType.STRING);
+    }
+
+    bool IsKWStart(){
+        return LookAhead().IsName && LookAhead2().Match('=');
     }
 
     ArgsList ParseArgs()
     {
-        return null;
+        var start_tok = NextToken();
+        var args = new ArgsList();
+        Debug.Assert(start_tok.Match('('));
+        using(_NewLimitTabGurad(start_tok, 1))
+        {
+            while(!IsKWStart() && IsMainExp()){
+                var exp = ParseExp();
+                args.arg_list.Add(exp);
+                if (CheckAndNext(',') == false) break; 
+            }
+            if (LastToken.Match(',', '(')){
+                while(IsKWStart()){
+                    var k = NextToken();
+                    NextToken();
+                    var exp = ParseExp();
+                    args.kw_list.Add(new ArgsList.KW{k = k, w = exp});
+                    if (CheckAndNext(',') == false) break; 
+                }
+                // 后面可能还有
+                if (LastToken.Match(',')){
+                    while(IsMainExp()){
+                        var exp = ParseExp();
+                        args.extra_args.Add(exp);
+                        if (CheckAndNext(',') == false) break; 
+                    }
+                }
+            }
+        }
+        if (!ExpectAndNext(args, ')')){
+            args.AddErrMsgToToken(start_tok, "miss corresponding ')'");
+        }
+        return args;
     }
 
     /// <summary>
@@ -785,15 +895,13 @@ public class LuaParser {
         else if (LookAhead().Match('('))
         {
             var tok = NextToken();// skip (
-            exp = ParseExp();
+            exp = new CircleExp{ inner_exp = ParseExp() };
             if (CheckAndNext(')') == false){
                 exp.AddErrMsgToToken(tok, "miss corresponding ')'");
             }
         }
         else {
-            // 有错误。
-            exp = new InvalidExp();
-            return exp;// 直接退出吧
+            Debug.Assert(false);
         }
 
         // table index or func call
@@ -805,26 +913,7 @@ public class LuaParser {
                 table_access.has_q = has_q;
                 exp = table_access;
             }
-            else if(LookAhead().Match(':'))
-            {
-                NextToken();// skip :
-                var table_access = new TableAccess();
-                table_access.table = exp;
-                exp = table_access;
-                if (LookAhead().Match(TokenType.NAME))
-                {
-                    table_access.index = new Terminator{token = NextToken()};
-                    // 后面应该就是函数参数了
-                    if (IsArgsCanStart()){
-                        exp = ParseFunctionCall(exp);
-                    }
-                }
-                else{
-                    table_access.AddErrMsgToToken(LastToken, "expect <Name> after ':'");
-                    break;// 有错误，退出
-                }
-            }
-            else if (IsArgsCanStart())
+            else if (LookAhead().Match(':') || IsArgsCanStart())
             {
                 exp = ParseFunctionCall(exp);
             }
@@ -1079,6 +1168,7 @@ public class LuaParser {
         else if(m_tab_size_limit > 0){
             if (token.RowIdx == _tab_limit_exclue_line_idx) return token;// 豁免
             // 字符串和注释存在换行的情况。不做任何限制
+            if (token.IsString) return token;
             // 强力限制。
             if (token.TabSize < m_tab_size_limit) return Token.None;
             // keyword must match tab limit

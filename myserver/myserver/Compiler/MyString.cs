@@ -117,6 +117,7 @@ public class MyLine{
 
     public void AddToken(Token tk){
         tk.tok_idx = m_tokens.Count;
+        tk.src_line = this;
         m_tokens.Add(tk);
     }
 

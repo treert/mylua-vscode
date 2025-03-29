@@ -252,6 +252,9 @@ public class Token
     public bool IsNone => Match(TokenType.None);// 其实可以直接用 == None
 
     public bool IsComment => Match(TokenType.Commnet);
+    public bool IsString => Match(TokenType.STRING);
+
+    public bool IsName => Match(TokenType.NAME);
 
     public MyLine src_line = null;// None 时，这个是null
     public int start_idx;
@@ -653,7 +656,7 @@ public class LuaLex
 
     Token _ReadNextToken(){
         var tk = __ReadNextToken();
-        tk.src_line = _line;
+        // tk.src_line = _line;// AddToken will do this
         return tk;
     }
 

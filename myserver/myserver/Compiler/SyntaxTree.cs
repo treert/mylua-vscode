@@ -106,7 +106,10 @@ public class GotoStatement : SyntaxTree
 
 public class InvalidStatement : SyntaxTree
 {
-
+    /// <summary>
+    /// 孤立的表达式。
+    /// </summary>
+    public ExpSyntaxTree exp;
 }
 
 public class InvalidExp : ExpSyntaxTree
@@ -163,7 +166,7 @@ public class ForInStatement : SyntaxTree
 
 public class FunctionStatement : SyntaxTree
 {
-    public List<Token> names;
+    public List<Token> names = [];
     public Token name_after_colon = Token.None;// XXX:Name 的 Name
     public FunctionBody func_body;
 }
@@ -181,6 +184,13 @@ public class Terminator : ExpSyntaxTree
     /// token is TokenType.NAME, but use as str
     /// </summary>
     public bool NameUsedAsStr = false;
+
+    public bool IsName => !NameUsedAsStr && token.Match(TokenType.NAME);
+}
+
+public class CircleExp : ExpSyntaxTree
+{
+    public ExpSyntaxTree inner_exp;
 }
 
 /// <summary>
@@ -245,7 +255,15 @@ public class TableAccess : ExpSyntaxTree
 public class FuncCall : ExpSyntaxTree
 {
     public ExpSyntaxTree caller;
-    public ArgsList args;
+    public Token? self_key;
+    public ArgsList? args;
+    public ExpSyntaxTree? single_exp_arg;
+}
+
+// 孤立的函数调用。当成是语句
+public class FuncCallStatement: SyntaxTree
+{
+    public FuncCall funcCall;
 }
 
 public class ArgsList : SyntaxTree
